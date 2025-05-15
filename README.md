@@ -13,7 +13,8 @@ A mobile marketplace app for UK builders, DIYers, and tradespeople to buy and se
 - £1 Stripe unlock to reveal contact info
 - £1 boost option for featured visibility
 - Favourites + full user dashboard
-- Dark mode / Light mode support
+- **Dark mode / Light mode toggle**
+- **Wanted section for posting material requests**
 - Supabase backend with Auth, Database, and Storage
 
 ## Tech Stack
@@ -31,7 +32,7 @@ The app includes a complete dark mode implementation with the following features
 
 1. **Theme Context**: A React context that provides theme values and a toggle function
 2. **System Theme Detection**: Automatically detects and applies the system theme preference
-3. **Manual Toggle**: Users can manually toggle between light, dark, and system themes
+3. **Manual Toggle**: Users can manually toggle between light, dark, and system themes in the More tab
 4. **Persistent Settings**: Theme preference is saved and persists between app sessions
 
 ### Theme Structure
@@ -84,6 +85,21 @@ export default function MyComponent() {
   );
 }
 ```
+
+## Wanted Section
+
+The app now includes a dedicated "Wanted" section where users can:
+
+1. **Browse Wanted Requests**: View items that other users are looking for
+2. **Filter by Category**: Filter wanted items by material category
+3. **Post Requests**: Create new wanted listings with details like:
+   - Item description
+   - Category
+   - Budget
+   - Location
+   - Urgency level
+
+This feature helps connect buyers with specific needs to sellers who might have matching materials, creating a more complete marketplace experience.
 
 ## Getting Started
 

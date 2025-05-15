@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import { MapPin, Chrome as Home, Tag, User, Menu } from 'lucide-react-native';
+import { MapPin, Chrome as Home, Tag, User, Menu, Search } from 'lucide-react-native';
 import { StyleSheet } from 'react-native';
 import { useTheme } from '@/hooks/useTheme';
 
@@ -39,6 +39,15 @@ export default function TabLayout() {
           title: 'Listings',
           tabBarIcon: ({ color, size }) => (
             <Tag size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="wanted"
+        options={{
+          title: 'Wanted',
+          tabBarIcon: ({ color, size }) => (
+            <Search size={size} color={color} />
           ),
         }}
       />

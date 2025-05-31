@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Pressable, Image, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Image, Dimensions, Platform } from 'react-native';
 import { Link } from 'expo-router';
 import { MapPin, ChevronRight, ChevronLeft, Heart } from 'lucide-react-native';
 import StatusBadge from './StatusBadge';
@@ -24,8 +24,17 @@ export default function ListingCard({ listing, compact = false, showStatus = fal
     setCurrentImageIndex(prev => (prev === 0 ? images.length - 1 : prev - 1));
   };
 
+  // Check if we're running on web
+  const isWeb = Platform.OS === 'web';
+
   return (
-    <Link href="/(tabs)/listings" asChild>
+    <Link
+      href={{
+        pathname: "/listing/[id]" as any,
+        params: { id: listing.id.toString() }
+      }}
+      asChild
+    >
       <Pressable style={[
         styles.card, 
         compact && styles.compactCard,
@@ -37,7 +46,12 @@ export default function ListingCard({ listing, compact = false, showStatus = fal
           {images.length > 1 && (
             <>
               <Pressable 
-                style={[styles.arrowButton, styles.leftArrow]} 
+                style={[
+                  styles.arrowButton, 
+                  styles.leftArrow,
+                  // Use marginTop instead of transform for web
+                  isWeb ? { marginTop: -15 } : { transform: [{ translateY: -15 }] }
+                ]} 
                 onPress={(e) => {
                   e.stopPropagation();
                   prevImage();
@@ -46,7 +60,12 @@ export default function ListingCard({ listing, compact = false, showStatus = fal
                 <ChevronLeft size={16} color="#fff" />
               </Pressable>
               <Pressable 
-                style={[styles.arrowButton, styles.rightArrow]} 
+                style={[
+                  styles.arrowButton, 
+                  styles.rightArrow,
+                  // Use marginTop instead of transform for web
+                  isWeb ? { marginTop: -15 } : { transform: [{ translateY: -15 }] }
+                ]} 
                 onPress={(e) => {
                   e.stopPropagation();
                   nextImage();
@@ -140,7 +159,7 @@ const styles = StyleSheet.create({
   arrowButton: {
     position: 'absolute',
     top: '50%',
-    transform: [{ translateY: -15 }],
+    // transform removed from here and applied conditionally in the component
     width: 30,
     height: 30,
     borderRadius: 15,

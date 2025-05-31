@@ -1,19 +1,71 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, Pressable, Image, ScrollView } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, Pressable, Image, ScrollView, Alert } from 'react-native';
 import { Settings, SquarePlus as PlusSquare, Package, Star, Clock, LogOut } from 'lucide-react-native';
-import { Link } from 'expo-router';
-import { mockUserProfile, mockUserListings } from '@/data/mockData';
+import { Link, router } from 'expo-router';
+import { mockUserListings } from '@/data/mockData';
 import ListingCard from '@/components/ListingCard';
 import StatusBadge from '@/components/StatusBadge';
 import { useTheme } from '@/hooks/useTheme';
+import { useAuthStore, getCurrentUser } from '@/lib/auth';
+
+// Define user type for TypeScript
+interface User {
+  email: string;
+  name: string;
+  userType: string;
+  image: string;
+  joinDate: string;
+}
 
 export default function ProfileScreen() {
   const [activeTab, setActiveTab] = useState('listings');
-  const { name, email, userType, image, joinDate } = mockUserProfile;
   const { theme } = useTheme();
+  const { logout } = useAuthStore();
+  const [user, setUser] = useState<User | null>(null);
+
+  // Get user data on component mount
+  useEffect(() => {
+    const userData = getCurrentUser();
+    setUser(userData as User);
+  }, []);
+
+  // Handle logout
+  const handleLogout = async () => {
+    Alert.alert(
+      "Sign Out",
+      "Are you sure you want to sign out?",
+      [
+        {
+          text: "Cancel",
+          style: "cancel"
+        },
+        {
+          text: "Sign Out",
+          style: "destructive",
+          onPress: async () => {
+            const result = await logout();
+            if (result.success) {
+              router.replace('../login');
+            } else {
+              Alert.alert("Error", result.error || "Failed to sign out");
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  // If user data is not loaded yet
+  if (!user) {
+    return (
+      <View style={[styles.container, { backgroundColor: theme.background, justifyContent: 'center', alignItems: 'center' }]}>
+        <Text style={{ color: theme.text }}>Loading profile...</Text>
+      </View>
+    );
+  }
 
   // Format join date
-  const formattedDate = new Date(joinDate).toLocaleDateString('en-GB', { 
+  const formattedDate = new Date(user.joinDate).toLocaleDateString('en-GB', { 
     month: 'long', 
     year: 'numeric' 
   });
@@ -29,11 +81,11 @@ export default function ProfileScreen() {
 
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={[styles.profileCard, { backgroundColor: theme.card }]}>
-          <Image source={{ uri: image }} style={styles.profileImage} />
+          <Image source={{ uri: user.image }} style={styles.profileImage} />
           <View style={styles.profileInfo}>
-            <Text style={[styles.profileName, { color: theme.text }]}>{name}</Text>
+            <Text style={[styles.profileName, { color: theme.text }]}>{user.name}</Text>
             <View style={[styles.userTypeContainer, { backgroundColor: theme.tabBar }]}>
-              <Text style={[styles.userTypeText, { color: theme.primary }]}>{userType}</Text>
+              <Text style={[styles.userTypeText, { color: theme.primary }]}>{user.userType}</Text>
             </View>
             <Text style={[styles.joinedText, { color: theme.secondaryText }]}>Member since {formattedDate}</Text>
           </View>
@@ -131,7 +183,10 @@ export default function ProfileScreen() {
           )}
         </View>
 
-        <Pressable style={[styles.logoutButton, { borderColor: '#FF3B30' }]}>
+        <Pressable 
+          style={[styles.logoutButton, { borderColor: '#FF3B30' }]}
+          onPress={handleLogout}
+        >
           <LogOut size={18} color="#FF3B30" />
           <Text style={styles.logoutText}>Sign Out</Text>
         </Pressable>

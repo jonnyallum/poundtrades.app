@@ -5,6 +5,7 @@ import { Link, router } from 'expo-router';
 import { mockUserListings } from '@/data/mockData';
 import ListingCard from '@/components/ListingCard';
 import StatusBadge from '@/components/StatusBadge';
+import CreateListingModal from '@/components/CreateListingModal';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuthStore, getCurrentUser } from '@/lib/auth';
 
@@ -19,6 +20,7 @@ interface User {
 
 export default function ProfileScreen() {
   const [activeTab, setActiveTab] = useState('listings');
+  const [showCreateModal, setShowCreateModal] = useState(false);
   const { theme } = useTheme();
   const { logout } = useAuthStore();
   const [user, setUser] = useState<User | null>(null);
@@ -108,12 +110,13 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        <Link href="/(tabs)/listings" asChild>
-          <Pressable style={[styles.createButton, { backgroundColor: theme.primary }]}>
-            <PlusSquare size={20} color="#000" />
-            <Text style={styles.createButtonText}>Create New Listing</Text>
-          </Pressable>
-        </Link>
+        <Pressable 
+          style={[styles.createButton, { backgroundColor: theme.primary }]}
+          onPress={() => setShowCreateModal(true)}
+        >
+          <PlusSquare size={20} color="#000" />
+          <Text style={styles.createButtonText}>Create New Listing</Text>
+        </Pressable>
 
         <View style={[styles.tabsContainer, { backgroundColor: theme.background }]}>
           <Pressable 
@@ -191,6 +194,16 @@ export default function ProfileScreen() {
           <Text style={styles.logoutText}>Sign Out</Text>
         </Pressable>
       </ScrollView>
+
+      {/* Create Listing Modal */}
+      <CreateListingModal
+        visible={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onSuccess={() => {
+          // Optionally refresh listings or navigate to listings tab
+          setActiveTab('listings');
+        }}
+      />
     </View>
   );
 }

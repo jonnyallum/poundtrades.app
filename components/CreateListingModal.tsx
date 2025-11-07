@@ -24,21 +24,35 @@ interface CreateListingModalProps {
   onSuccess?: () => void;
 }
 
+interface CategoryOption {
+  id: number;
+  name: string;
+}
+
+interface FormDataState {
+  title: string;
+  description: string;
+  price: string;
+  category_id: string;
+  location: string;
+  images: string[];
+}
+
 export default function CreateListingModal({ visible, onClose, onSuccess }: CreateListingModalProps) {
   const { theme } = useTheme();
   const { user } = useAuthStore();
-  
+
   const [isLoading, setIsLoading] = useState(false);
-  const [categories, setCategories] = useState([]);
-  
+  const [categories, setCategories] = useState<CategoryOption[]>([]);
+
   // Form state
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormDataState>({
     title: '',
     description: '',
     price: '',
     category_id: '',
     location: '',
-    images: []
+    images: [],
   });
 
   // Load categories on mount
@@ -51,12 +65,12 @@ export default function CreateListingModal({ visible, onClose, onSuccess }: Crea
   const loadCategories = async () => {
     const { data, error } = await categoriesService.getCategories();
     if (!error && data) {
-      setCategories(data);
+      setCategories(data as CategoryOption[]);
     }
   };
 
   const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       [field]: value
     }));
@@ -74,7 +88,7 @@ export default function CreateListingModal({ visible, onClose, onSuccess }: Crea
 
       if (!result.canceled && result.assets) {
         const newImages = result.assets.map(asset => asset.uri);
-        setFormData(prev => ({
+        setFormData((prev) => ({
           ...prev,
           images: [...prev.images, ...newImages].slice(0, 5) // Max 5 images
         }));
@@ -85,7 +99,7 @@ export default function CreateListingModal({ visible, onClose, onSuccess }: Crea
   };
 
   const removeImage = (index: number) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       images: prev.images.filter((_, i) => i !== index)
     }));
@@ -150,7 +164,7 @@ export default function CreateListingModal({ visible, onClose, onSuccess }: Crea
         price: '',
         category_id: '',
         location: '',
-        images: []
+        images: [],
       });
 
       onSuccess?.();

@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "EXPO_NO_TELEMETRY=1 expo start",
     "build:web": "expo export --platform web",
-    "lint": "expo lint",
+    "lint": "tsc --noEmit",
+    "verify:supabase": "node scripts/test-create-listing.mjs",
     "android": "expo run:android",
     "ios": "expo run:ios"
   },
@@ -56,6 +57,7 @@
   "devDependencies": {
     "@babel/core": "^7.25.2",
     "@types/react": "~19.0.10",
+    "dotenv": "^16.4.5",
     "typescript": "~5.8.3"
   },
   "expo": {

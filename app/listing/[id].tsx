@@ -1,26 +1,38 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, Pressable, Image, ScrollView, ActivityIndicator, Alert, Share } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Image, ScrollView, ActivityIndicator, Alert, Share, Platform } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { Heart, Share2, ChevronLeft, MapPin, Phone, MessageSquare } from 'lucide-react-native';
-import { useStripe } from '@stripe/stripe-react-native';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuthStore } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
 import { mockListings } from '@/data/mockData';
 import MapView from '@/components/MapView';
+import { useStripeSafe } from '@/lib/stripe';
+import { env } from '@/lib/env';
 
 export default function ListingDetailsScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const { theme } = useTheme();
   const { user, isAuthenticated } = useAuthStore();
-  const { initPaymentSheet, presentPaymentSheet } = useStripe();
+  const { initPaymentSheet, presentPaymentSheet, isPlatformSupported } = useStripeSafe();
   
   const [listing, setListing] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [unlocked, setUnlocked] = useState(false);
   const [favorited, setFavorited] = useState(false);
   const [paymentLoading, setPaymentLoading] = useState(false);
+
+  const resolveStripeErrorMessage = (error: unknown, fallback: string) => {
+    if (error && typeof error === 'object' && 'message' in error) {
+      const message = (error as { message?: unknown }).message;
+      if (typeof message === 'string' && message.trim().length > 0) {
+        return message;
+      }
+    }
+
+    return fallback;
+  };
 
   // Fetch listing data
   const fetchListing = useCallback(async () => {
@@ -35,7 +47,7 @@ export default function ListingDetailsScreen() {
         setListing(foundListing);
         
         // Check if this listing is already unlocked by this user
-        if (user) {
+        if (user && env.isSupabaseConfigured) {
           try {
             const { data: unlockData } = await supabase
               .from('unlocks')
@@ -60,6 +72,8 @@ export default function ListingDetailsScreen() {
             // which is expected behavior for new users
             console.log('User data check error:', error);
           }
+        } else if (!env.isSupabaseConfigured) {
+          console.warn('Supabase is not configured. Unlock and favourite status checks are disabled.');
         }
       }
     } catch (error) {
@@ -88,33 +102,52 @@ export default function ListingDetailsScreen() {
       );
     }
 
+    if (!isPlatformSupported) {
+      const platformLabel = Platform.select({ web: 'web', default: 'this platform' });
+      Alert.alert(
+        'Payments unavailable',
+        `Unlocking seller contact information is only available on supported mobile builds. Current platform: ${platformLabel}.`,
+      );
+      return;
+    }
+
+    if (!env.isSupabaseConfigured || !env.isStripeConfigured) {
+      Alert.alert(
+        'Payments unavailable',
+        'Stripe integration is not configured. Please try again once EXPO_PUBLIC_STRIPE_* and EXPO_PUBLIC_SUPABASE_* environment variables are set.',
+      );
+      return;
+    }
+
     try {
       setPaymentLoading(true);
-      
-      // Fetch payment intent from Supabase Edge Function
-      const response = await fetch(
-        'https://otwslrepaneebmlttkwu.supabase.co/functions/v1/create-payment-intent',
+
+      const { data: paymentData, error: invokeError } = await supabase.functions.invoke(
+        env.stripeFunctionName ?? 'create-payment-intent',
         {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`,
-          },
-          body: JSON.stringify({
-            amount: 100, // £1 in pence
+          body: {
+            amount: 100,
             currency: 'gbp',
             description: `Unlock listing ${id}`,
             customer_email: user.email,
-          }),
-        }
+          },
+        },
       );
-      
-      const { paymentIntent, ephemeralKey, customer, publishableKey } = await response.json();
-      
-      if (!paymentIntent) {
-        throw new Error('Failed to create payment intent');
+
+      if (invokeError) {
+        throw new Error(resolveStripeErrorMessage(invokeError, 'Failed to create payment intent'));
       }
-      
+
+      const { paymentIntent, ephemeralKey, customer, publishableKey } = paymentData ?? {};
+
+      if (!paymentIntent || !customer || !ephemeralKey) {
+        throw new Error('Payment intent response was missing required fields');
+      }
+
+      if (env.stripePublishableKey && publishableKey && publishableKey !== env.stripePublishableKey) {
+        console.warn('Stripe publishable key returned by the function differs from configured key.');
+      }
+
       // Initialize the Payment Sheet
       const { error: initError } = await initPaymentSheet({
         merchantDisplayName: 'PoundTrades',
@@ -127,38 +160,43 @@ export default function ListingDetailsScreen() {
           email: user.email,
         },
       });
-      
+
       if (initError) {
-        throw new Error(initError.message);
+        throw new Error(resolveStripeErrorMessage(initError, 'Failed to initialise Stripe payment sheet'));
       }
-      
+
       // Present the Payment Sheet
-      const { error: paymentError } = await presentPaymentSheet();
-      
-      if (paymentError) {
-        if (paymentError.code === 'Canceled') {
+      const { error: sheetError } = await presentPaymentSheet();
+
+      if (sheetError) {
+        const sheetCode = (sheetError as { code?: string }).code;
+        if (sheetCode === 'Canceled') {
           setPaymentLoading(false);
           return; // User canceled, just return without error
         }
-        throw new Error(paymentError.message);
+        throw new Error(resolveStripeErrorMessage(sheetError, 'Payment confirmation failed'));
       }
       
       // Payment successful, record the unlock in Supabase
-      try {
-        const { error: unlockError } = await supabase
-          .from('unlocks')
-          .insert([{
-            user_id: user.id,
-            listing_id: id,
-            amount: 100, // £1 in pence
-            payment_intent: paymentIntent.split('_secret_')[0], // Extract the payment intent ID
-            created_at: new Date().toISOString()
-          }]);
-          
-        if (unlockError) throw new Error(unlockError.message);
-      } catch (dbError) {
-        console.log('Database error:', dbError);
-        // Continue anyway since payment was successful
+      if (env.isSupabaseConfigured) {
+        try {
+          const { error: unlockError } = await supabase
+            .from('unlocks')
+            .insert([
+              {
+                user_id: user.id,
+                listing_id: id,
+                amount: 100,
+                payment_intent: String(paymentIntent).split('_secret_')[0],
+                created_at: new Date().toISOString(),
+              },
+            ]);
+
+          if (unlockError) throw new Error(unlockError.message);
+        } catch (dbError) {
+          console.log('Database error:', dbError);
+          // Continue anyway since payment was successful
+        }
       }
       
       setUnlocked(true);
@@ -182,6 +220,14 @@ export default function ListingDetailsScreen() {
           { text: 'Login', onPress: () => router.push('../login') }
         ]
       );
+    }
+
+    if (!env.isSupabaseConfigured) {
+      Alert.alert(
+        'Feature unavailable',
+        'Favourites require Supabase to be configured. Please try again once EXPO_PUBLIC_SUPABASE_* variables are set.',
+      );
+      return;
     }
 
     try {

@@ -32,7 +32,14 @@ export default function MapScreen() {
       </View>
 
       <View style={styles.mapContainer}>
-        <MapView listings={mockListings} selectedListing={selectedListing} />
+        <MapView
+          listings={mockListings}
+          selectedListing={selectedListing}
+          onMarkerPress={(marker) => {
+            const listing = mockListings.find((item) => item.id === marker.id);
+            setSelectedListing(listing ?? null);
+          }}
+        />
       </View>
 
       <View style={styles.listingsContainer}>

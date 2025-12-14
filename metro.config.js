@@ -4,6 +4,8 @@ const path = require('path');
 
 const config = getDefaultConfig(__dirname);
 
+config.watchFolders = [...(config.watchFolders || []), path.resolve(__dirname, 'shims')];
+
 config.resolver.extraNodeModules = {
   ...(config.resolver.extraNodeModules || {}),
   crypto: path.resolve(__dirname, 'shims/crypto.js'),

@@ -1,10 +1,17 @@
 const { getDefaultConfig } = require('expo/metro-config');
 const { resolve } = require('metro-resolver');
+const fs = require('fs');
 const path = require('path');
 
 const config = getDefaultConfig(__dirname);
 
-config.watchFolders = [...(config.watchFolders || []), path.resolve(__dirname, 'shims')];
+const shimsPath = path.resolve(__dirname, 'shims');
+
+if (!fs.existsSync(shimsPath)) {
+  fs.mkdirSync(shimsPath, { recursive: true });
+}
+
+config.watchFolders = [...(config.watchFolders || []), shimsPath];
 
 config.resolver.extraNodeModules = {
   ...(config.resolver.extraNodeModules || {}),

@@ -110,8 +110,6 @@ This feature helps connect buyers with specific needs to sellers who might have 
    - **Recommended for Mapbox-native builds:** `MAPBOX_DOWNLOADS_TOKEN` (secret token with `downloads:read` scope)
    - **Optional for map rendering:** `EXPO_PUBLIC_MAPBOX_TOKEN` (public token for client-side SDK access)
    - **Without a downloads token:** the app automatically switches to the MapLibre implementation (no token required), but Mapbox SDK–specific features and styles may be limited.
-   - **Required for native builds:** `MAPBOX_DOWNLOADS_TOKEN` (secret token with `downloads:read` scope)
-   - **Optional for map rendering:** `EXPO_PUBLIC_MAPBOX_TOKEN` (public token for client-side SDK access)
 5. Start the development server with `npm run dev`
 
 ## License

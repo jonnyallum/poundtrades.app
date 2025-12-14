@@ -1,7 +1,10 @@
 const { getDefaultConfig } = require('expo/metro-config');
+const { resolve } = require('metro-resolver');
 const path = require('path');
 
 const config = getDefaultConfig(__dirname);
+
+config.watchFolders = [...(config.watchFolders || []), path.resolve(__dirname, 'shims')];
 
 config.resolver.extraNodeModules = {
   ...(config.resolver.extraNodeModules || {}),
@@ -15,6 +18,18 @@ config.resolver.extraNodeModules = {
   url: path.resolve(__dirname, 'shims/url.js'),
   zlib: path.resolve(__dirname, 'shims/zlib.js'),
   ws: path.resolve(__dirname, 'shims/ws.js'),
+};
+
+config.resolver.resolveRequest = (context, moduleName, platform) => {
+  if (moduleName === 'stream' || moduleName.startsWith('stream/')) {
+    return { type: 'sourceFile', filePath: path.resolve(__dirname, 'shims/stream.js') };
+  }
+
+  if (moduleName === 'ws' || moduleName.startsWith('ws/')) {
+    return { type: 'sourceFile', filePath: path.resolve(__dirname, 'shims/ws.js') };
+  }
+
+  return resolve(context, moduleName, platform);
 };
 
 module.exports = config;

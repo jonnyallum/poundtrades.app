@@ -1,5 +1,7 @@
 import { ConfigContext, ExpoConfig } from '@expo/config';
 
+export default ({ config }: ConfigContext): ExpoConfig => {
+  const mapboxDownloadsToken =
 const resolveDownloadToken = (): string => {
   const token =
     process.env.MAPBOX_DOWNLOADS_TOKEN ||
@@ -8,6 +10,14 @@ const resolveDownloadToken = (): string => {
     process.env.EXPO_PUBLIC_MAPBOX_TOKEN ||
     '';
 
+  const isMapboxDownloadsTokenValid = Boolean(
+    mapboxDownloadsToken && !mapboxDownloadsToken.startsWith('pk.'),
+  );
+
+  const mapImplementation = isMapboxDownloadsTokenValid ? 'mapbox' : 'maplibre';
+  const mapboxPluginConfig = isMapboxDownloadsTokenValid
+    ? { RNMapboxMapsImpl: 'mapbox', RNMapboxMapsDownloadToken: mapboxDownloadsToken }
+    : { RNMapboxMapsImpl: 'maplibre' };
   if (!token) {
     throw new Error(
       'Mapbox downloads token is missing. Set MAPBOX_DOWNLOADS_TOKEN (recommended) or RNMAPBOX_DOWNLOAD_TOKEN in your build environment.',
@@ -56,6 +66,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       'expo-router',
       'expo-font',
       'expo-web-browser',
+      ['@rnmapbox/maps', mapboxPluginConfig],
       [
         '@rnmapbox/maps',
         {
@@ -72,6 +83,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       eas: {
         projectId: 'a38a6117-7178-4b36-a66f-54d255325e43',
       },
+      mapImplementation,
     },
     owner: 'poundtrades',
   } satisfies ExpoConfig;

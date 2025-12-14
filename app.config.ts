@@ -2,6 +2,8 @@ import { ConfigContext, ExpoConfig } from '@expo/config';
 
 export default ({ config }: ConfigContext): ExpoConfig => {
   const mapboxDownloadsToken =
+const resolveDownloadToken = (): string => {
+  const token =
     process.env.MAPBOX_DOWNLOADS_TOKEN ||
     process.env.EXPO_PUBLIC_MAPBOX_DOWNLOAD_TOKEN ||
     process.env.RNMAPBOX_DOWNLOAD_TOKEN ||
@@ -16,6 +18,23 @@ export default ({ config }: ConfigContext): ExpoConfig => {
   const mapboxPluginConfig = isMapboxDownloadsTokenValid
     ? { RNMapboxMapsImpl: 'mapbox', RNMapboxMapsDownloadToken: mapboxDownloadsToken }
     : { RNMapboxMapsImpl: 'maplibre' };
+  if (!token) {
+    throw new Error(
+      'Mapbox downloads token is missing. Set MAPBOX_DOWNLOADS_TOKEN (recommended) or RNMAPBOX_DOWNLOAD_TOKEN in your build environment.',
+    );
+  }
+
+  if (token.startsWith('pk.')) {
+    throw new Error(
+      'Mapbox downloads token must be a secret token (sk.*) with downloads:read scope. Public tokens (pk.*) are not sufficient for native builds.',
+    );
+  }
+
+  return token;
+};
+
+export default ({ config }: ConfigContext): ExpoConfig => {
+  const mapboxDownloadsToken = resolveDownloadToken();
 
   return {
     ...config,
@@ -48,6 +67,13 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       'expo-font',
       'expo-web-browser',
       ['@rnmapbox/maps', mapboxPluginConfig],
+      [
+        '@rnmapbox/maps',
+        {
+          RNMapboxMapsImpl: 'mapbox',
+          RNMapboxMapsDownloadToken: mapboxDownloadsToken,
+        },
+      ],
     ],
     experiments: {
       typedRoutes: true,

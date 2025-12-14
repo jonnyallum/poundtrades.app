@@ -7,15 +7,12 @@ declare namespace NodeJS {
     readonly EXPO_PUBLIC_STRIPE_FUNCTION_URL?: string;
     readonly EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY?: string;
     readonly EXPO_PUBLIC_MAPBOX_TOKEN?: string;
-    readonly EXPO_PUBLIC_MAPBOX_DOWNLOAD_TOKEN?: string;
     readonly SUPABASE_URL?: string;
     readonly SUPABASE_ANON_KEY?: string;
     readonly STRIPE_FUNCTION_NAME?: string;
     readonly STRIPE_FUNCTION_URL?: string;
     readonly STRIPE_PUBLISHABLE_KEY?: string;
     readonly MAPBOX_API_KEY?: string;
-    readonly MAPBOX_DOWNLOADS_TOKEN?: string;
-    readonly RNMAPBOX_DOWNLOAD_TOKEN?: string;
     readonly APP_ENV?: string;
   }
 }

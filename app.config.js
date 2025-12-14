@@ -1,6 +1,3 @@
-const baseConfig = require('./app.config.base');
-
-module.exports = baseConfig;
 const { version } = require('./package.json');
 
 const resolveDownloadToken = () =>
@@ -11,7 +8,6 @@ const resolveDownloadToken = () =>
   '';
 
 const resolveMapConfig = () => {
-module.exports = ({ config }) => {
   const mapboxDownloadsToken = resolveDownloadToken();
   const isMapboxDownloadsTokenValid = Boolean(
     mapboxDownloadsToken && !mapboxDownloadsToken.startsWith('pk.'),

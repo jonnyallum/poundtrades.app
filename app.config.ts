@@ -1,15 +1,26 @@
-const { version } = require('./package.json');
+import { ConfigContext, ExpoConfig } from '@expo/config';
+import packageJson from './package.json';
 
-const resolveDownloadToken = () =>
+const resolveDownloadToken = (): string =>
   process.env.MAPBOX_DOWNLOADS_TOKEN ||
   process.env.EXPO_PUBLIC_MAPBOX_DOWNLOAD_TOKEN ||
   process.env.RNMAPBOX_DOWNLOAD_TOKEN ||
   process.env.EXPO_PUBLIC_MAPBOX_TOKEN ||
   '';
 
-const resolveMapConfig = () => {
-module.exports = ({ config }) => {
+export default ({ config }: ConfigContext): ExpoConfig => {
   const mapboxDownloadsToken = resolveDownloadToken();
+
+export default ({ config }: ConfigContext): ExpoConfig => {
+  const mapboxDownloadsToken =
+const resolveDownloadToken = (): string => {
+  const token =
+    process.env.MAPBOX_DOWNLOADS_TOKEN ||
+    process.env.EXPO_PUBLIC_MAPBOX_DOWNLOAD_TOKEN ||
+    process.env.RNMAPBOX_DOWNLOAD_TOKEN ||
+    process.env.EXPO_PUBLIC_MAPBOX_TOKEN ||
+    '';
+
   const isMapboxDownloadsTokenValid = Boolean(
     mapboxDownloadsToken && !mapboxDownloadsToken.startsWith('pk.'),
   );
@@ -18,18 +29,30 @@ module.exports = ({ config }) => {
   const mapboxPluginConfig = isMapboxDownloadsTokenValid
     ? { RNMapboxMapsImpl: 'mapbox', RNMapboxMapsDownloadToken: mapboxDownloadsToken }
     : { RNMapboxMapsImpl: 'maplibre' };
+  if (!token) {
+    throw new Error(
+      'Mapbox downloads token is missing. Set MAPBOX_DOWNLOADS_TOKEN (recommended) or RNMAPBOX_DOWNLOAD_TOKEN in your build environment.',
+    );
+  }
 
-  return { mapImplementation, mapboxPluginConfig };
+  if (token.startsWith('pk.')) {
+    throw new Error(
+      'Mapbox downloads token must be a secret token (sk.*) with downloads:read scope. Public tokens (pk.*) are not sufficient for native builds.',
+    );
+  }
+
+  return token;
 };
 
-module.exports = ({ config }) => {
-  const { mapImplementation, mapboxPluginConfig } = resolveMapConfig();
+export default ({ config }: ConfigContext): ExpoConfig => {
+  const mapboxDownloadsToken = resolveDownloadToken();
 
   return {
     ...config,
     name: 'bolt-expo-nativewind',
     slug: 'poundtrades-mobile-app',
-    version,
+    version: packageJson.version,
+    version: '1.0.0',
     orientation: 'portrait',
     icon: './assets/images/icon.png',
     scheme: 'myapp',
@@ -56,6 +79,13 @@ module.exports = ({ config }) => {
       'expo-font',
       'expo-web-browser',
       ['@rnmapbox/maps', mapboxPluginConfig],
+      [
+        '@rnmapbox/maps',
+        {
+          RNMapboxMapsImpl: 'mapbox',
+          RNMapboxMapsDownloadToken: mapboxDownloadsToken,
+        },
+      ],
     ],
     experiments: {
       typedRoutes: true,
@@ -69,4 +99,5 @@ module.exports = ({ config }) => {
     },
     owner: 'poundtrades',
   };
+  } satisfies ExpoConfig;
 };

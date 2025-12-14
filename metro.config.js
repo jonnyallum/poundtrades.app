@@ -11,6 +11,8 @@ if (!fs.existsSync(shimsPath)) {
   fs.mkdirSync(shimsPath, { recursive: true });
 }
 
+config.watchFolders = [...(config.watchFolders || []), shimsPath];
+
 config.resolver.extraNodeModules = {
   ...(config.resolver.extraNodeModules || {}),
   crypto: path.resolve(__dirname, 'shims/crypto.js'),
@@ -22,6 +24,8 @@ config.resolver.extraNodeModules = {
   tls: path.resolve(__dirname, 'shims/tls.js'),
   url: path.resolve(__dirname, 'shims/url.js'),
   zlib: path.resolve(__dirname, 'shims/zlib.js'),
+  http: path.resolve(__dirname, 'shims/http.js'),
+  stream: path.resolve(__dirname, 'shims/stream.js'),
   ws: path.resolve(__dirname, 'shims/ws.js'),
 };
 

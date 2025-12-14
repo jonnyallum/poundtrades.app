@@ -7,6 +7,7 @@ const resolveDownloadToken = () =>
   process.env.EXPO_PUBLIC_MAPBOX_TOKEN ||
   '';
 
+const resolveMapConfig = () => {
 module.exports = ({ config }) => {
   const mapboxDownloadsToken = resolveDownloadToken();
   const isMapboxDownloadsTokenValid = Boolean(
@@ -17,6 +18,12 @@ module.exports = ({ config }) => {
   const mapboxPluginConfig = isMapboxDownloadsTokenValid
     ? { RNMapboxMapsImpl: 'mapbox', RNMapboxMapsDownloadToken: mapboxDownloadsToken }
     : { RNMapboxMapsImpl: 'maplibre' };
+
+  return { mapImplementation, mapboxPluginConfig };
+};
+
+module.exports = ({ config }) => {
+  const { mapImplementation, mapboxPluginConfig } = resolveMapConfig();
 
   return {
     ...config,

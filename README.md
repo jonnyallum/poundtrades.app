@@ -106,7 +106,10 @@ This feature helps connect buyers with specific needs to sellers who might have 
 1. Clone the repository
 2. Install dependencies with `npm install`
 3. Create a `.env` file with your Supabase credentials
-4. Start the development server with `npm run dev`
+4. Add your Mapbox tokens:
+   - **Required for native builds:** `MAPBOX_DOWNLOADS_TOKEN` (secret token with `downloads:read` scope)
+   - **Optional for map rendering:** `EXPO_PUBLIC_MAPBOX_TOKEN` (public token for client-side SDK access)
+5. Start the development server with `npm run dev`
 
 ## License
 

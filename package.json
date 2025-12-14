@@ -38,6 +38,7 @@
     "expo-system-ui": "~5.0.7",
     "expo-web-browser": "~14.1.6",
     "lucide-react-native": "^0.475.0",
+    "mapbox-gl": "^3.13.0",
     "react": "19.0.0",
     "react-dom": "19.0.0",
     "react-native": "^0.79.2",
@@ -51,6 +52,7 @@
     "react-native-url-polyfill": "^2.0.0",
     "react-native-web": "^0.20.0",
     "react-native-webview": "13.13.5",
+    "ws": "file:packages/ws-shim",
     "zustand": "^5.0.4"
   },
   "devDependencies": {

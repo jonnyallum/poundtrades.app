@@ -1,4 +1,15 @@
 import { ConfigContext, ExpoConfig } from '@expo/config';
+import packageJson from './package.json';
+
+const resolveDownloadToken = (): string =>
+  process.env.MAPBOX_DOWNLOADS_TOKEN ||
+  process.env.EXPO_PUBLIC_MAPBOX_DOWNLOAD_TOKEN ||
+  process.env.RNMAPBOX_DOWNLOAD_TOKEN ||
+  process.env.EXPO_PUBLIC_MAPBOX_TOKEN ||
+  '';
+
+export default ({ config }: ConfigContext): ExpoConfig => {
+  const mapboxDownloadsToken = resolveDownloadToken();
 
 export default ({ config }: ConfigContext): ExpoConfig => {
   const mapboxDownloadsToken =
@@ -40,6 +51,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     ...config,
     name: 'bolt-expo-nativewind',
     slug: 'poundtrades-mobile-app',
+    version: packageJson.version,
     version: '1.0.0',
     orientation: 'portrait',
     icon: './assets/images/icon.png',
@@ -86,5 +98,6 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       mapImplementation,
     },
     owner: 'poundtrades',
+  };
   } satisfies ExpoConfig;
 };

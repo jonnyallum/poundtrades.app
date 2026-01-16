@@ -14,7 +14,6 @@ const resolveMapConfig = () => {
   );
 
   const mapImplementation = isMapboxDownloadsTokenValid ? 'mapbox' : 'maplibre';
-    ? { RNMapboxMapsImpl: 'mapbox', RNMapboxMapsDownloadToken: mapboxDownloadsToken }
 
   let mapboxPluginConfig;
   if (isMapboxDownloadsTokenValid) {
@@ -24,8 +23,10 @@ const resolveMapConfig = () => {
     };
   } else {
     mapboxPluginConfig = { RNMapboxMapsImpl: 'maplibre' };
-  }};
-
+}
+  
+  return { mapImplementation, mapboxPluginConfig };
+  };
 module.exports =  function({ config })   {
   const { mapImplementation, mapboxPluginConfig } = resolveMapConfig();
 

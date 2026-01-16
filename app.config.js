@@ -67,5 +67,8 @@ module.exports = ({ config }) => {
       mapImplementation,
     },
     owner: 'poundtrades',
+        cli: {
+      appVersionSource: 'remote',
+    },
   };
 };

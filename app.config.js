@@ -1,80 +1,55 @@
 const { version } = require('./package.json');
 
-const resolveDownloadToken = () =>
-  process.env.MAPBOX_DOWNLOADS_TOKEN ||
-  process.env.EXPO_PUBLIC_MAPBOX_DOWNLOAD_TOKEN ||
-  process.env.RNMAPBOX_DOWNLOAD_TOKEN ||
-  process.env.EXPO_PUBLIC_MAPBOX_TOKEN ||
-  '';
-
-const resolveMapConfig = () => {
-  const mapboxDownloadsToken = resolveDownloadToken();
-  const isMapboxDownloadsTokenValid = Boolean(
-    mapboxDownloadsToken && !mapboxDownloadsToken.startsWith('pk.'),
-  );
-
-  const mapImplementation = isMapboxDownloadsTokenValid ? 'mapbox' : 'maplibre';
-
-  let mapboxPluginConfig;
-  if (isMapboxDownloadsTokenValid) {
-    mapboxPluginConfig = {
-      RNMapboxMapsImpl: 'mapbox',
-      RNMapboxMapsDownloadToken: mapboxDownloadsToken
-    };
-  } else {
-    mapboxPluginConfig = { RNMapboxMapsImpl: 'maplibre' };
-}
-  
-  return { mapImplementation, mapboxPluginConfig };
-  };
-module.exports =  function({ config })   {
-  const { mapImplementation, mapboxPluginConfig } = resolveMapConfig();
-
-  return {
-    ...config,
-    name: 'bolt-expo-nativewind',
+module.exports = {
+  expo: {
+    name: 'PoundTrades',
     slug: 'poundtrades-mobile-app',
-    version,
+    version: version,
     orientation: 'portrait',
     icon: './assets/images/icon.png',
     scheme: 'myapp',
     userInterfaceStyle: 'automatic',
     newArchEnabled: true,
-    android: {
-      package: 'com.poundtrades.mobileapp',
-      adaptiveIcon: {
-        foregroundImage: './assets/images/adaptive-icon.png',
-        backgroundColor: '#ffffff',
-      },
-    },
     ios: {
       supportsTablet: true,
-      bundleIdentifier: 'com.poundtrades.mobileapp',
+      bundleIdentifier: 'com.poundtrades.app'
+    },
+    android: {
+      adaptiveIcon: {
+        foregroundImage: './assets/images/adaptive-icon.png',
+        backgroundColor: '#ffffff'
+      },
+      package: 'com.poundtrades.app'
     },
     web: {
       bundler: 'metro',
       output: 'static',
-      favicon: './assets/images/favicon.png',
+      favicon: './assets/images/favicon.png'
     },
     plugins: [
       'expo-router',
       'expo-font',
       'expo-web-browser',
-      ['@rnmapbox/maps', mapboxPluginConfig],
+      [
+        '@rnmapbox/maps',
+        {
+          RNMapboxMapsImpl: 'mapbox',
+          RNMapboxMapsDownloadToken: process.env.MAPBOX_DOWNLOADS_TOKEN
+        }
+      ]
     ],
     experiments: {
-      typedRoutes: true,
+      typedRoutes: true
     },
     extra: {
       router: {},
       eas: {
-        projectId: 'a38a6117-7178-4b36-a66f-54d255325e43',
+        projectId: 'a38a6117-7178-4b36-a66f-54d255325e43'
       },
-      mapImplementation,
-            cli:  {
-        appVersionSource: 'remote',
-      },
+      cli: {
+        appVersionSource: 'remote'
+      }
     },
-    owner: 'poundtrades',
-};
+    owner: 'poundtrades'
   }
+};

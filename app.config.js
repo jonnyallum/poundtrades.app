@@ -65,7 +65,7 @@ module.exports =  function({ config })   {
         projectId: 'a38a6117-7178-4b36-a66f-54d255325e43',
       },
       mapImplementation,
-             {
+            cli:  {
         appVersionSource: 'remote',
       },
     },

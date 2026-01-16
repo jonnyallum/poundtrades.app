@@ -14,12 +14,17 @@ const resolveMapConfig = () => {
   );
 
   const mapImplementation = isMapboxDownloadsTokenValid ? 'mapbox' : 'maplibre';
-  const mapboxPluginConfig = isMapboxDownloadsTokenValid
     ? { RNMapboxMapsImpl: 'mapbox', RNMapboxMapsDownloadToken: mapboxDownloadsToken }
-    : { RNMapboxMapsImpl: 'maplibre' };
 
-  return { mapImplementation, mapboxPluginConfig };
-};
+  let mapboxPluginConfig;
+  if (isMapboxDownloadsTokenValid) {
+    mapboxPluginConfig = {
+      RNMapboxMapsImpl: 'mapbox',
+      RNMapboxMapsDownloadToken: mapboxDownloadsToken
+    };
+  } else {
+    mapboxPluginConfig = { RNMapboxMapsImpl: 'maplibre' };
+  }};
 
 module.exports =  function({ config })   {
   const { mapImplementation, mapboxPluginConfig } = resolveMapConfig();

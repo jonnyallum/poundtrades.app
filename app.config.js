@@ -21,7 +21,7 @@ const resolveMapConfig = () => {
   return { mapImplementation, mapboxPluginConfig };
 };
 
-module.exports = ({ config }) => {
+module.exports =  function({ config })   {
   const { mapImplementation, mapboxPluginConfig } = resolveMapConfig();
 
   return {

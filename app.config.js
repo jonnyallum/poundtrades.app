@@ -71,3 +71,4 @@ module.exports =  function({ config })   {
     },
     owner: 'poundtrades',
 };
+  }

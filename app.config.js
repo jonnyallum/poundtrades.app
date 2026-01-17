@@ -19,7 +19,7 @@ module.exports = {
         foregroundImage: './assets/images/adaptive-icon.png',
         backgroundColor: '#ffffff'
       },
-      package: 'com.poundtrades.app'
+      package: 'com.poundtrades.mobileapp'
     },
     web: {
       bundler: 'metro',

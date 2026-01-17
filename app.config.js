@@ -33,7 +33,8 @@ module.exports = {
       [
         '@rnmapbox/maps',
         {
-          RNMapboxMapsImpl: 'mapbox'        }
+          RNMapboxMapsImpl: 'mapbox'
+        }
       ]
     ],
     experiments: {

@@ -12,7 +12,7 @@ module.exports = {
     newArchEnabled: true,
     ios: {
       supportsTablet: true,
-      bundleIdentifier: 'com.poundtrades.app'
+      bundleIdentifier: 'com.poundtrades.mobileapp'
     },
     android: {
       adaptiveIcon: {
@@ -33,7 +33,8 @@ module.exports = {
       [
         '@rnmapbox/maps',
         {
-          RNMapboxMapsImpl: 'mapbox'
+          RNMapboxMapsImpl: 'mapbox',
+          RNMapboxMapsDownloadToken: 'pk.eyJ1IjoicHRyYWRlczY5IiwiYSI6ImNtYmNqNzdlazFsd3AybHMxdHkwcG1ndWwifQ.nPJxSWKIN780x2fr5SjfsQ'
         }
       ]
     ],

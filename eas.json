@@ -17,6 +17,9 @@
       }
     },
     "production": {
+      "cache": {
+        "disabled": true
+      },
       "android": {
         "buildType": "app-bundle"
       },

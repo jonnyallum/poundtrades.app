@@ -1,5 +1,4 @@
 const { getDefaultConfig } = require('expo/metro-config');
-const { resolve } = require('metro-resolver');
 const fs = require('fs');
 const path = require('path');
 
@@ -27,16 +26,20 @@ config.resolver.extraNodeModules = {
   ws: path.resolve(__dirname, 'shims/ws.js'),
 };
 
+// Custom resolver that handles shims without requiring metro-resolver directly
 config.resolver.resolveRequest = (context, moduleName, platform) => {
+  // Handle stream module and subpaths
   if (moduleName === 'stream' || moduleName.startsWith('stream/')) {
     return { type: 'sourceFile', filePath: path.resolve(__dirname, 'shims/stream.js') };
   }
 
+  // Handle ws module and subpaths
   if (moduleName === 'ws' || moduleName.startsWith('ws/')) {
     return { type: 'sourceFile', filePath: path.resolve(__dirname, 'shims/ws.js') };
   }
 
-  return resolve(context, moduleName, platform);
+  // Use the default resolver from context for all other modules
+  return context.resolveRequest(context, moduleName, platform);
 };
 
 module.exports = config;

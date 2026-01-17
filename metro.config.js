@@ -24,16 +24,6 @@ config.resolver.extraNodeModules = {
   tls: path.resolve(__dirname, 'shims/tls.js'),
   url: path.resolve(__dirname, 'shims/url.js'),
   zlib: path.resolve(__dirname, 'shims/zlib.js'),
-};
-
-config.resolver.resolveRequest = (context, moduleName, platform) => {
-  if (moduleName === 'stream' || moduleName.startsWith('stream/')) {
-    return { type: 'sourceFile', filePath: path.resolve(__dirname, 'shims/stream.js') };
-  }
-
-  return resolve(context, moduleName, platform);
-  http: path.resolve(__dirname, 'shims/http.js'),
-  stream: path.resolve(__dirname, 'shims/stream.js'),
   ws: path.resolve(__dirname, 'shims/ws.js'),
 };
 

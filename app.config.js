@@ -34,7 +34,7 @@ module.exports = {
         '@rnmapbox/maps',
         {
           RNMapboxMapsImpl: 'mapbox',
-          RNMapboxMapsDownloadToken: 'pk.eyJ1IjoicHRyYWRlczY5IiwiYSI6ImNtYmNqNzdlazFsd3AybHMxdHkwcG1ndWwifQ.nPJxSWKIN780x2fr5SjfsQ'
+          RNMapboxMapsDownloadToken: process.env.MAPBOX_DOWNLOADS_TOKEN || 'sk.eyJ1IjoicHRyYWRlczY5IiwiYSI6ImNta2l2ZGdzcDBkdHUzZnM3aDgzc293OWIifQ.t54-2Bw1T2VqWgbLWdivxw'
         }
       ]
     ],

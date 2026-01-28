@@ -44,18 +44,33 @@ interface MapViewProps {
 }
 
 const MarkerPulse = ({ color }: { color: string }) => {
+  const isWeb = Platform.OS === 'web';
   const scale = useSharedValue(1);
   const opacity = useSharedValue(0.6);
 
   useEffect(() => {
-    scale.value = withRepeat(withTiming(2.2, { duration: 2500 }), -1, false);
-    opacity.value = withRepeat(withTiming(0, { duration: 2500 }), -1, false);
-  }, []);
+    if (!isWeb) {
+      scale.value = withRepeat(withTiming(2.2, { duration: 2500 }), -1, false);
+      opacity.value = withRepeat(withTiming(0, { duration: 2500 }), -1, false);
+    }
+  }, [isWeb]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
     opacity: opacity.value,
   }));
+
+  // On web, use a simple static pulse (can be enhanced with CSS animation)
+  if (isWeb) {
+    return (
+      <View
+        style={[
+          styles.pulse,
+          { backgroundColor: color, opacity: 0.4 }
+        ]}
+      />
+    );
+  }
 
   return (
     <Animated.View
@@ -82,6 +97,7 @@ const MapView: React.FC<MapViewProps> = ({
   earthZoom = false,
 }) => {
   const { theme } = useTheme();
+  const isWeb = Platform.OS === 'web';
   const [loading, setLoading] = useState(true);
   const [satellite, setSatellite] = useState(false);
   const cameraRef = useRef<Mapbox.Camera>(null);

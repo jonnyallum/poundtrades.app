@@ -2,7 +2,7 @@ import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Dimensions, Platf
 import { useTheme } from '@/hooks/useTheme';
 import { Search, MapPin, Filter, Bell, Menu, Crown, Plus, LogOut } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ListingCard } from '@/components/ListingCard';
+import ListingCard from '@/components/ListingCard';
 import { supabase } from '@/lib/supabase';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
@@ -10,7 +10,8 @@ import { useRouter } from 'expo-router';
 const { width } = Dimensions.get('window');
 
 export default function Marketplace() {
-    const { colors } = useTheme();
+    const { theme } = useTheme();
+    const colors = theme.colors;
     const router = useRouter();
     const [listings, setListings] = useState<any[]>([]);
     const [refreshing, setRefreshing] = useState(false);
@@ -123,12 +124,15 @@ export default function Marketplace() {
                         listings.map((l) => (
                             <ListingCard
                                 key={l.id}
-                                title={l.title}
-                                price={`£${l.price_pounds}`}
-                                location="Manchester, UK" // Static for now
-                                status={l.status}
-                                category={l.category?.toUpperCase() || 'GENERAL'}
-                                onPress={() => { }}
+                                listing={{
+                                    id: l.id,
+                                    title: l.title,
+                                    price: l.price_pounds,
+                                    location: l.location || 'Manchester, UK',
+                                    images: l.images || [l.image_url || 'https://via.placeholder.com/300'],
+                                    status: l.status,
+                                    userType: l.user_type || 'trader'
+                                }}
                             />
                         ))
                     ) : (

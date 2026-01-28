@@ -20,23 +20,23 @@ export default function Logo({
   textColor?: string;
 }) {
   const { theme } = useTheme();
-  
+
   // Map sizes to dimensions
   const sizes = {
     small: { imageSize: 24, fontSize: 18, marginLeft: 4 },
     medium: { imageSize: 32, fontSize: 24, marginLeft: 8 },
     large: { imageSize: 96, fontSize: 32, marginLeft: 12 },
   };
-  
+
   const { imageSize, fontSize, marginLeft } = sizes[size];
-  
+
   // Use provided textColor or default to theme primary color
-  const color = textColor || theme.primary;
+  const color = textColor || theme.colors.primary;
 
   return (
     <View style={styles.container}>
       <Image
-        source={require('../assets/images/icon.png')}
+        source={require('../../assets/images/icon.png')}
         style={[
           styles.image,
           { width: imageSize, height: imageSize },

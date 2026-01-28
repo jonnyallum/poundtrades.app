@@ -3,11 +3,11 @@ import { Link } from 'expo-router';
 import { MapPin, Search, ArrowRight } from 'lucide-react-native';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
-import Hero from '../../components/Hero';
-import MapView from '../../components/MapView';
-import CategoryGrid from '../../components/CategoryGrid';
-import FeaturedListings from '../../components/FeaturedListings';
-import HowItWorks from '../../components/HowItWorks';
+import Hero from '@/components/Hero';
+import MapView from '@/components/MapView';
+import CategoryGrid from '@/components/CategoryGrid';
+import FeaturedListings from '@/components/FeaturedListings';
+import HowItWorks from '@/components/HowItWorks';
 import { useTheme } from '@/hooks/useTheme';
 
 const { width } = Dimensions.get('window');

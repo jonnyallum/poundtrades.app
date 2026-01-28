@@ -6,7 +6,8 @@ import { supabase } from '@/lib/supabase';
 import { X, Camera, MapPin, Check, Loader2 } from 'lucide-react-native';
 
 export default function CreateListing() {
-    const { colors } = useTheme();
+    const { theme } = useTheme();
+    const colors = theme.colors;
     const router = useRouter();
     const [loading, setLoading] = useState(false);
 

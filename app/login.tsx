@@ -8,7 +8,8 @@ import { ChevronRight, ShieldCheck, Briefcase, User, Box, Loader2, Eye, EyeOff }
 const { width } = Dimensions.get('window');
 
 export default function LoginScreen() {
-    const { colors } = useTheme();
+    const { theme } = useTheme();
+    const colors = theme.colors;
     const router = useRouter();
     const [role, setRole] = useState<'private' | 'business' | 'direct' | 'admin'>('private');
     const [email, setEmail] = useState('');

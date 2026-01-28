@@ -2,7 +2,7 @@ import React from 'react';
 import { View, StyleSheet, FlatList } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import ListingCard from './ListingCard';
-import { mockListings } from '../data/mockData';
+import { mockListings } from '@/data/mockData';
 
 // Get first 4 listings for featured section
 const featuredListings = mockListings.slice(0, 4);

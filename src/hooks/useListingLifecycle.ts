@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase } from '@/lib/supabase';
 import { useStripe } from '@stripe/stripe-react-native';
 
 export function useListingLifecycle(listingId: string) {

@@ -4,7 +4,8 @@ import { Lock, Phone, User, Calendar } from 'lucide-react-native';
 import { useState } from 'react';
 
 export function ListingDetails({ listing }: any) {
-    const { colors } = useTheme();
+    const { theme } = useTheme();
+    const colors = theme.colors;
     const [isUnlocked, setIsUnlocked] = useState(false);
 
     return (

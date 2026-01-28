@@ -7,7 +7,8 @@ import { useRef, useEffect } from 'react';
 MapboxGL.setAccessToken(process.env.EXPO_PUBLIC_MAPBOX_TOKEN || '');
 
 export default function MapScreen() {
-    const { colors } = useTheme();
+    const { theme } = useTheme();
+    const colors = theme.colors;
     const camera = useRef<MapboxGL.Camera>(null);
 
     const zoomToMe = () => {

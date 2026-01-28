@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, ImageBackground, Pressable, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, ImageBackground, Pressable, Dimensions, Platform } from 'react-native';
 import { Link } from 'expo-router';
 import { ArrowRight } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -20,6 +20,7 @@ const { width } = Dimensions.get('window');
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 export default function Hero() {
+  const isWeb = Platform.OS === 'web';
   const scale = useSharedValue(1);
 
   const pressStyle = useAnimatedStyle(() => ({
@@ -27,13 +28,23 @@ export default function Hero() {
   }));
 
   const handlePressIn = () => {
-    scale.value = withSpring(0.95);
+    if (!isWeb) scale.value = withSpring(0.95);
   };
 
   const handlePressOut = () => {
-    scale.value = withSpring(1);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (!isWeb) {
+      scale.value = withSpring(1);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
   };
+
+  // Web-safe wrappers
+  const ViewWrapper = isWeb ? View : Animated.View;
+  const TextWrapper = isWeb ? Text : Animated.Text;
+  const ButtonWrapper = isWeb ? Pressable : AnimatedPressable;
+  const buttonStyles = isWeb
+    ? styles.button
+    : [styles.button, pressStyle];
 
   return (
     <ImageBackground
@@ -46,42 +57,42 @@ export default function Hero() {
         style={styles.overlay}
       >
         <View style={styles.contentContainer}>
-          <Animated.View entering={FadeInDown.duration(800).delay(200)}>
+          <ViewWrapper {...(!isWeb && { entering: FadeInDown.duration(800).delay(200) })}>
             <Logo size="large" />
-          </Animated.View>
+          </ViewWrapper>
 
-          <Animated.Text
-            entering={FadeInDown.duration(800).delay(400)}
+          <TextWrapper
+            {...(!isWeb && { entering: FadeInDown.duration(800).delay(400) })}
             style={styles.tagline}
           >
             Turn your surplus into cash
-          </Animated.Text>
+          </TextWrapper>
 
-          <Animated.Text
-            entering={FadeInDown.duration(800).delay(600)}
+          <TextWrapper
+            {...(!isWeb && { entering: FadeInDown.duration(800).delay(600) })}
             style={styles.subtitle}
           >
             List, connect, and sell your leftover building materials quickly and easily.
-          </Animated.Text>
+          </TextWrapper>
 
           <Link href={"/(tabs)/listings" as any} asChild>
-            <AnimatedPressable
-              entering={FadeInDown.duration(800).delay(800)}
-              style={[styles.button, pressStyle]}
+            <ButtonWrapper
+              {...(!isWeb && { entering: FadeInDown.duration(800).delay(800) })}
+              style={buttonStyles as any}
               onPressIn={handlePressIn}
               onPressOut={handlePressOut}
             >
               <Text style={styles.buttonText}>Browse Listings</Text>
               <ArrowRight size={18} color="#000" />
-            </AnimatedPressable>
+            </ButtonWrapper>
           </Link>
 
-          <Animated.Text
-            entering={FadeIn.duration(1000).delay(1200)}
+          <TextWrapper
+            {...(!isWeb && { entering: FadeIn.duration(1000).delay(1200) })}
             style={styles.costText}
           >
             Only £1 to connect
-          </Animated.Text>
+          </TextWrapper>
         </View>
       </LinearGradient>
     </ImageBackground>

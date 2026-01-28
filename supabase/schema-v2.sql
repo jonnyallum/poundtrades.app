@@ -54,3 +54,49 @@ BEGIN
   AND unlocked_at < NOW() - INTERVAL '3 days';
 END;
 $$ LANGUAGE plpgsql;
+
+-- Set up Row Level Security (RLS)
+ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE listings ENABLE ROW LEVEL SECURITY;
+
+-- Profiles Policies
+CREATE POLICY "Public profiles are viewable by everyone." ON profiles
+  FOR SELECT USING (true);
+
+CREATE POLICY "Users can insert their own profile." ON profiles
+  FOR INSERT WITH CHECK (auth.uid() = id);
+
+CREATE POLICY "Users can update own profile." ON profiles
+  FOR UPDATE USING (auth.uid() = id);
+
+-- Listings Policies
+CREATE POLICY "Listings are viewable by everyone." ON listings
+  FOR SELECT USING (true);
+
+CREATE POLICY "Authenticated users can create listings." ON listings
+  FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+
+CREATE POLICY "Users can update own listings." ON listings
+  FOR UPDATE USING (auth.uid() = seller_id);
+
+CREATE POLICY "Users can delete own listings." ON listings
+  FOR DELETE USING (auth.uid() = seller_id);
+
+-- Trigger to automatically create profile on signup
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO public.profiles (id, full_name, avatar_url, role)
+  VALUES (
+    new.id, 
+    new.raw_user_meta_data->>'full_name', 
+    new.raw_user_meta_data->>'avatar_url',
+    (COALESCE(new.raw_user_meta_data->>'role', 'private'))::user_role
+  );
+  RETURN new;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE OR REPLACE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();

@@ -4,26 +4,30 @@ import { StatusBar } from 'expo-status-bar';
 
 // Define theme colors
 export const lightTheme = {
-  background: '#f8f8f8',
-  card: '#ffffff',
-  text: '#000000',
-  secondaryText: '#666666',
-  border: '#e0e0e0',
+  background: '#FFFFFF',
+  surface: '#F5F5F7',
+  card: '#FFFFFF',
+  text: '#1D1D1F',
+  secondaryText: '#86868B',
+  border: '#D2D2D7',
   primary: '#FFD700',
-  tabBar: '#ffffff',
-  tabBarInactive: '#666666',
+  accent: '#0071E3',
+  tabBar: '#FFFFFF',
+  tabBarInactive: '#86868B',
   statusBar: 'dark',
 };
 
 export const darkTheme = {
-  background: '#121212',
-  card: '#1e1e1e',
-  text: '#ffffff',
-  secondaryText: '#aaaaaa',
-  border: '#333333',
+  background: '#000000',
+  surface: '#1C1C1E',
+  card: '#1C1C1E',
+  text: '#F5F5F7',
+  secondaryText: '#86868B',
+  border: '#38383A',
   primary: '#FFD700',
+  accent: '#0A84FF',
   tabBar: '#000000',
-  tabBarInactive: '#666666',
+  tabBarInactive: '#86868B',
   statusBar: 'light',
 };
 

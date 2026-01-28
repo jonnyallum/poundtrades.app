@@ -1,7 +1,8 @@
 import React from 'react';
 import { View, StyleSheet, FlatList } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import ListingCard from './ListingCard';
-import { mockListings } from '@/data/mockData';
+import { mockListings } from '../data/mockData';
 
 // Get first 4 listings for featured section
 const featuredListings = mockListings.slice(0, 4);
@@ -11,15 +12,20 @@ export default function FeaturedListings() {
     <View style={styles.container}>
       <FlatList
         data={featuredListings}
-        renderItem={({ item }) => (
-          <View style={styles.cardContainer}>
+        renderItem={({ item, index }) => (
+          <Animated.View
+            entering={FadeInDown.delay(400 + index * 150).duration(800)}
+            style={styles.cardContainer}
+          >
             <ListingCard listing={item} />
-          </View>
+          </Animated.View>
         )}
         keyExtractor={(item) => item.id.toString()}
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.listContainer}
+        snapToInterval={280 + 20}
+        decelerationRate="fast"
       />
     </View>
   );
@@ -27,13 +33,14 @@ export default function FeaturedListings() {
 
 const styles = StyleSheet.create({
   container: {
-    marginVertical: 5,
+    marginVertical: 10,
   },
   listContainer: {
+    paddingLeft: 20,
     paddingRight: 20,
   },
   cardContainer: {
     width: 280,
-    marginRight: 15,
+    marginRight: 20,
   },
 });

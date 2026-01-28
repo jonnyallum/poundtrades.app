@@ -1,6 +1,16 @@
-import React, { useMemo, useState } from 'react';
-import { View, StyleSheet, ActivityIndicator, Text } from 'react-native';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
+import { View, StyleSheet, ActivityIndicator, Text, Pressable, Platform } from 'react-native';
 import Mapbox from '@rnmapbox/maps';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withRepeat,
+  withTiming,
+  interpolate,
+  Extrapolate
+} from 'react-native-reanimated';
+import { Layers, Navigation, MapPin } from 'lucide-react-native';
+import * as Haptics from 'expo-haptics';
 import { useTheme } from '@/hooks/useTheme';
 import { env } from '@/lib/env';
 
@@ -8,10 +18,6 @@ const mapboxConfigured = Boolean(env.mapboxToken);
 
 if (mapboxConfigured) {
   Mapbox.setAccessToken(env.mapboxToken!);
-} else {
-  console.warn(
-    'Mapbox token is not configured. Define EXPO_PUBLIC_MAPBOX_TOKEN to enable map rendering.',
-  );
 }
 
 interface ListingLocation {
@@ -19,23 +25,9 @@ interface ListingLocation {
   latitude: number;
   longitude: number;
   title: string;
+  price?: number | string;
   userType?: string;
 }
-
-interface MarkerLocation extends ListingLocation {
-  markerColor: string;
-}
-
-const getMarkerColor = (userType?: string) => {
-  switch (userType) {
-    case 'Tradesperson':
-      return '#EA4335';
-    case 'Local Business':
-      return '#34A853';
-    default:
-      return '#4285F4';
-  }
-};
 
 interface MapViewProps {
   latitude?: number;
@@ -47,112 +39,153 @@ interface MapViewProps {
   listings?: ListingLocation[];
   selectedListing?: ListingLocation | null;
   onMarkerPress?: (listing: ListingLocation) => void;
+  cinematic?: boolean;
+  earthZoom?: boolean;
 }
 
-/**
- * MapView component using Mapbox
- * 
- * Displays a map centered on the provided coordinates with an optional marker
- * Can show the user's current location if showUserLocation is true
- */
+const MarkerPulse = ({ color }: { color: string }) => {
+  const scale = useSharedValue(1);
+  const opacity = useSharedValue(0.6);
+
+  useEffect(() => {
+    scale.value = withRepeat(withTiming(2.2, { duration: 2500 }), -1, false);
+    opacity.value = withRepeat(withTiming(0, { duration: 2500 }), -1, false);
+  }, []);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+    opacity: opacity.value,
+  }));
+
+  return (
+    <Animated.View
+      style={[
+        styles.pulse,
+        { backgroundColor: color },
+        animatedStyle
+      ]}
+    />
+  );
+};
+
 const MapView: React.FC<MapViewProps> = ({
   latitude,
   longitude,
   title,
   showUserLocation = false,
-  height = 200,
-  zoomLevel = 14,
-  listings,
+  height = 300,
+  zoomLevel = 13,
+  listings = [],
   selectedListing,
   onMarkerPress,
+  cinematic = false,
+  earthZoom = false,
 }) => {
   const { theme } = useTheme();
   const [loading, setLoading] = useState(true);
+  const [satellite, setSatellite] = useState(false);
+  const cameraRef = useRef<Mapbox.Camera>(null);
 
   if (!mapboxConfigured) {
     return (
-      <View style={[styles.container, { height, justifyContent: 'center', alignItems: 'center' }]}>
-        <Text style={[styles.fallbackText, { color: theme.secondaryText }]}>Map preview unavailable</Text>
-        <Text style={[styles.fallbackHint, { color: theme.secondaryText }]}>Configure EXPO_PUBLIC_MAPBOX_TOKEN to enable Mapbox.</Text>
+      <View style={[styles.container, { height, justifyContent: 'center', alignItems: 'center', backgroundColor: theme.colors.surface }]}>
+        <MapPin size={32} color={theme.colors.textMuted} />
+        <Text style={[styles.fallbackText, { color: theme.colors.text }]}>Map preview unavailable</Text>
+        <Text style={[styles.fallbackHint, { color: theme.colors.textMuted }]}>Configure EXPO_PUBLIC_MAPBOX_TOKEN to enable maps.</Text>
       </View>
     );
   }
 
-  const markers = useMemo<MarkerLocation[]>(() => {
-    if (listings && listings.length > 0) {
-      return listings.map((listing) => ({
-        id: listing.id,
-        latitude: listing.latitude,
-        longitude: listing.longitude,
-        title: listing.title,
-        userType: listing.userType,
-        markerColor: getMarkerColor(listing.userType),
-      }));
+  const getMarkerColor = (userType?: string) => {
+    switch (userType) {
+      case 'Tradesperson': return theme.colors.status.sold;
+      case 'Local Business': return theme.colors.status.active;
+      default: return theme.colors.primary;
     }
-
-    if (latitude != null && longitude != null) {
-      return [{
-        id: 'primary',
-        latitude,
-        longitude,
-        title: title ?? 'Location',
-        markerColor: getMarkerColor(),
-      }];
-    }
-
-    return [];
-  }, [latitude, longitude, listings, title]);
-
-  const centerLatitude = selectedListing?.latitude ?? markers[0]?.latitude ?? latitude ?? 51.5074;
-  const centerLongitude = selectedListing?.longitude ?? markers[0]?.longitude ?? longitude ?? -0.1278;
-
-  // Handle map load completion
-  const onMapLoad = () => {
-    setLoading(false);
   };
 
+  const centerCoord = useMemo(() => {
+    if (selectedListing) return [selectedListing.longitude, selectedListing.latitude];
+    if (listings.length > 0) return [listings[0].longitude, listings[0].latitude];
+    if (longitude != null && latitude != null) return [longitude, latitude];
+    return [-0.1278, 51.5074]; // London
+  }, [selectedListing, listings, longitude, latitude]);
+
+  const mapStyle = satellite ? Mapbox.StyleURL.SatelliteStreet : (theme.statusBar === 'dark' ? Mapbox.StyleURL.Dark : Mapbox.StyleURL.Light);
+
   return (
-    <View style={[styles.container, { height }]}>
+    <View style={[styles.container, { height, borderColor: theme.colors.border }]}>
       {loading && (
-        <View style={[styles.loadingContainer, { backgroundColor: theme.background }]}>
-          <ActivityIndicator size="large" color={theme.primary} />
+        <View style={[styles.loadingContainer, { backgroundColor: theme.colors.background }]}>
+          <ActivityIndicator size="large" color={theme.colors.primary} />
         </View>
       )}
-      
+
       <Mapbox.MapView
         style={styles.map}
-        styleURL={Mapbox.StyleURL.Dark}
-        onDidFinishLoadingMap={onMapLoad}
+        styleURL={mapStyle}
+        onDidFinishLoadingMap={() => setLoading(false)}
         logoEnabled={false}
         attributionEnabled={false}
+        antialias={true}
       >
         <Mapbox.Camera
-          zoomLevel={zoomLevel}
-          centerCoordinate={[centerLongitude, centerLatitude]}
+          ref={cameraRef}
+          zoomLevel={earthZoom && loading ? 1 : zoomLevel}
+          centerCoordinate={centerCoord as number[]}
           animationMode="flyTo"
-          animationDuration={1000}
+          animationDuration={earthZoom ? 4000 : 1500}
+          pitch={cinematic ? 45 : 0}
+          bearing={cinematic ? 15 : 0}
         />
 
-        {/* Marker at the specified locations */}
-        {markers.map((marker) => (
+        <Mapbox.RasterDemSource
+          id="mapbox-dem"
+          url="mapbox://mapbox.mapbox-terrain-dem-v1"
+          tileSize={512}
+          maxZoomLevel={14}
+        >
+          <Mapbox.Terrain style={{ exaggeration: 1.5 }} />
+        </Mapbox.RasterDemSource>
+
+        <Mapbox.SkyLayer
+          id="sky-layer"
+          style={{
+            skyType: 'atmosphere',
+            skyAtmosphereColor: theme.statusBar === 'dark' ? '#000' : '#87CEEB',
+            skyAtmosphereSun: [0.0, 90.0],
+          }}
+        />
+
+        {listings.map((item) => (
           <Mapbox.PointAnnotation
-            key={String(marker.id)}
-            id={String(marker.id)}
-            coordinate={[marker.longitude, marker.latitude]}
-            title={marker.title}
-            onSelected={() => onMarkerPress?.(marker)}
+            key={String(item.id)}
+            id={String(item.id)}
+            coordinate={[item.longitude, item.latitude]}
+            onSelected={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              onMarkerPress?.(item);
+            }}
+            anchor={{ x: 0.5, y: 1 }}
           >
-            <View
-              style={[
-                styles.marker,
-                { backgroundColor: marker.markerColor },
-                marker.id === selectedListing?.id && styles.selectedMarker,
-              ]}
-            />
+            <View style={styles.markerContainer}>
+              {selectedListing?.id === item.id && (
+                <MarkerPulse color={getMarkerColor(item.userType)} />
+              )}
+              <View
+                style={[
+                  styles.marker,
+                  {
+                    backgroundColor: getMarkerColor(item.userType),
+                    borderColor: theme.colors.surface,
+                    transform: [{ scale: selectedListing?.id === item.id ? 1.3 : 1 }]
+                  }
+                ]}
+              />
+            </View>
           </Mapbox.PointAnnotation>
         ))}
 
-        {/* Show user location if enabled */}
         {showUserLocation && (
           <Mapbox.UserLocation
             visible={true}
@@ -161,6 +194,31 @@ const MapView: React.FC<MapViewProps> = ({
           />
         )}
       </Mapbox.MapView>
+
+      <View style={styles.controls}>
+        <Pressable
+          onPress={() => {
+            setSatellite(!satellite);
+            Haptics.selectionAsync();
+          }}
+          style={[styles.controlButton, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
+        >
+          <Layers size={20} color={theme.colors.text} />
+        </Pressable>
+        <Pressable
+          onPress={() => {
+            cameraRef.current?.setCamera({
+              centerCoordinate: centerCoord as number[],
+              zoomLevel: 15,
+              animationDuration: 1000,
+            });
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          }}
+          style={[styles.controlButton, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
+        >
+          <Navigation size={20} color={theme.colors.primary} />
+        </Pressable>
+      </View>
     </View>
   );
 };
@@ -168,9 +226,10 @@ const MapView: React.FC<MapViewProps> = ({
 const styles = StyleSheet.create({
   container: {
     width: '100%',
-    borderRadius: 12,
+    borderRadius: 24,
     overflow: 'hidden',
-    marginVertical: 10,
+    borderWidth: 1,
+    position: 'relative',
   },
   map: {
     flex: 1,
@@ -181,31 +240,53 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     zIndex: 10,
   },
-  marker: {
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    borderWidth: 2,
-    borderColor: '#ffffff',
-    transform: [{ scale: 1 }],
+  controls: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    gap: 8,
   },
-  selectedMarker: {
-    borderWidth: 3,
-    borderColor: '#111827',
-    transform: [{ scale: 1.35 }],
+  controlButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
     shadowColor: '#000',
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 4,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  markerContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 40,
+    height: 40,
+  },
+  marker: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    borderWidth: 3,
+  },
+  pulse: {
+    position: 'absolute',
+    width: 24,
+    height: 24,
+    borderRadius: 12,
   },
   fallbackText: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 18,
+    fontWeight: '800',
+    marginTop: 12,
   },
   fallbackHint: {
+    fontSize: 13,
     marginTop: 4,
-    fontSize: 12,
+    textAlign: 'center',
+    paddingHorizontal: 40,
   },
 });
 

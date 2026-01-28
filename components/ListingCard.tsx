@@ -2,6 +2,14 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, Pressable, Image, Dimensions, Platform } from 'react-native';
 import { Link } from 'expo-router';
 import { MapPin, ChevronRight, ChevronLeft, Heart } from 'lucide-react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  FadeIn
+} from 'react-native-reanimated';
+import * as Haptics from 'expo-haptics';
+import { LinearGradient } from 'expo-linear-gradient';
 import StatusBadge from './StatusBadge';
 import { useTheme } from '@/hooks/useTheme';
 
@@ -11,20 +19,37 @@ type ListingCardProps = {
   showStatus?: boolean;
 };
 
+const { width } = Dimensions.get('window');
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
 export default function ListingCard({ listing, compact = false, showStatus = false }: ListingCardProps) {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const { title, price, location, images, status, userType } = listing;
   const { theme } = useTheme();
+  const scale = useSharedValue(1);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
 
   const nextImage = () => {
     setCurrentImageIndex(prev => (prev + 1) % images.length);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   };
 
   const prevImage = () => {
     setCurrentImageIndex(prev => (prev === 0 ? images.length - 1 : prev - 1));
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   };
 
-  // Check if we're running on web
+  const handlePressIn = () => {
+    scale.value = withSpring(0.98);
+  };
+
+  const handlePressOut = () => {
+    scale.value = withSpring(1);
+  };
+
   const isWeb = Platform.OS === 'web';
 
   return (
@@ -35,23 +60,28 @@ export default function ListingCard({ listing, compact = false, showStatus = fal
       }}
       asChild
     >
-      <Pressable style={[
-        styles.card, 
-        compact && styles.compactCard,
-        { backgroundColor: theme.card }
-      ]}>
-        <View style={styles.imageContainer}>
+      <AnimatedPressable
+        style={[
+          styles.card,
+          compact && styles.compactCard,
+          { backgroundColor: theme.colors.card, shadowColor: '#000' },
+          animatedStyle
+        ]}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+      >
+        <View style={[styles.imageContainer, compact && styles.compactImageContainer]}>
           <Image source={{ uri: images[currentImageIndex] }} style={styles.image} />
-          
-          {images.length > 1 && (
+
+          <LinearGradient
+            colors={['rgba(0,0,0,0.4)', 'transparent', 'rgba(0,0,0,0.6)']}
+            style={StyleSheet.absoluteFill}
+          />
+
+          {images.length > 1 && !compact && (
             <>
-              <Pressable 
-                style={[
-                  styles.arrowButton, 
-                  styles.leftArrow,
-                  // Use marginTop instead of transform for web
-                  isWeb ? { marginTop: -15 } : { transform: [{ translateY: -15 }] }
-                ]} 
+              <Pressable
+                style={[styles.arrowButton, styles.leftArrow]}
                 onPress={(e) => {
                   e.stopPropagation();
                   prevImage();
@@ -59,13 +89,8 @@ export default function ListingCard({ listing, compact = false, showStatus = fal
               >
                 <ChevronLeft size={16} color="#fff" />
               </Pressable>
-              <Pressable 
-                style={[
-                  styles.arrowButton, 
-                  styles.rightArrow,
-                  // Use marginTop instead of transform for web
-                  isWeb ? { marginTop: -15 } : { transform: [{ translateY: -15 }] }
-                ]} 
+              <Pressable
+                style={[styles.arrowButton, styles.rightArrow]}
                 onPress={(e) => {
                   e.stopPropagation();
                   nextImage();
@@ -75,82 +100,83 @@ export default function ListingCard({ listing, compact = false, showStatus = fal
               </Pressable>
             </>
           )}
-          
-          <Pressable 
+
+          <Pressable
             style={styles.favoriteButton}
             onPress={(e) => {
               e.stopPropagation();
-              // Toggle favorite logic would go here
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             }}
           >
             <Heart size={20} color="#fff" />
           </Pressable>
-          
-          <View style={[styles.priceTag, { backgroundColor: theme.primary }]}>
+
+          <View style={[styles.priceTag, { backgroundColor: theme.colors.primary }]}>
             <Text style={styles.priceText}>£{price}</Text>
           </View>
-          
+
           {showStatus && (
             <View style={styles.statusBadgeContainer}>
               <StatusBadge status={status} />
             </View>
           )}
-          
-          <View style={[styles.userTypeContainer, { backgroundColor: 'rgba(0, 0, 0, 0.7)' }]}>
+
+          <View style={styles.userTypeContainer}>
             <Text style={styles.userTypeText}>{userType}</Text>
           </View>
         </View>
-        
+
         <View style={styles.contentContainer}>
-          <Text 
+          <Text
             style={[
-              styles.title, 
+              styles.title,
               compact && styles.compactTitle,
-              { color: theme.text }
-            ]} 
+              { color: theme.colors.text }
+            ]}
             numberOfLines={compact ? 1 : 2}
           >
             {title}
           </Text>
-          
+
           <View style={styles.locationContainer}>
-            <MapPin size={14} color={theme.secondaryText} />
-            <Text style={[styles.locationText, { color: theme.secondaryText }]} numberOfLines={1}>
+            <MapPin size={14} color={theme.colors.textMuted} />
+            <Text style={[styles.locationText, { color: theme.colors.textMuted }]} numberOfLines={1}>
               {location}
             </Text>
           </View>
-          
+
           {!compact && status !== 'sold' && (
-            <View style={[styles.connectContainer, { borderTopColor: theme.border }]}>
-              <Text style={[styles.connectText, { color: theme.text }]}>Only £1 to connect</Text>
+            <View style={[styles.connectContainer, { borderTopColor: theme.colors.border }]}>
+              <Text style={[styles.connectText, { color: theme.colors.primaryDark }]}>Only £1 to connect</Text>
             </View>
           )}
         </View>
-      </Pressable>
+      </AnimatedPressable>
     </Link>
   );
 }
 
-const { width } = Dimensions.get('window');
-const CARD_WIDTH = width * 0.85;
-
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 8,
+    borderRadius: 20,
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowRadius: 20,
+    elevation: 5,
+    marginVertical: 10,
   },
   compactCard: {
-    height: 160,
+    height: 120,
     flexDirection: 'row',
   },
   imageContainer: {
     position: 'relative',
-    height: 180,
+    height: 200,
+  },
+  compactImageContainer: {
+    height: '100%',
+    width: 120,
   },
   image: {
     width: '100%',
@@ -159,11 +185,11 @@ const styles = StyleSheet.create({
   arrowButton: {
     position: 'absolute',
     top: '50%',
-    // transform removed from here and applied conditionally in the component
+    marginTop: -15,
     width: 30,
     height: 30,
     borderRadius: 15,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -175,71 +201,76 @@ const styles = StyleSheet.create({
   },
   favoriteButton: {
     position: 'absolute',
-    top: 10,
-    right: 10,
+    top: 12,
+    right: 12,
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   priceTag: {
     position: 'absolute',
-    bottom: 10,
-    left: 10,
-    paddingVertical: 5,
-    paddingHorizontal: 10,
-    borderRadius: 4,
+    bottom: 12,
+    left: 12,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 12,
   },
   priceText: {
-    fontWeight: 'bold',
+    fontWeight: '800',
     color: '#000',
+    fontSize: 14,
   },
   statusBadgeContainer: {
     position: 'absolute',
-    top: 10,
-    left: 10,
+    top: 12,
+    left: 12,
   },
   userTypeContainer: {
     position: 'absolute',
-    bottom: 10,
-    right: 10,
-    paddingVertical: 3,
+    bottom: 12,
+    right: 12,
+    paddingVertical: 4,
     paddingHorizontal: 8,
-    borderRadius: 4,
+    borderRadius: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   userTypeText: {
     fontSize: 10,
+    fontWeight: '700',
     color: '#fff',
+    textTransform: 'uppercase',
   },
   contentContainer: {
-    padding: 12,
+    padding: 16,
   },
   title: {
-    fontSize: 16,
-    fontWeight: 'bold',
+    fontSize: 18,
+    fontWeight: '700',
     marginBottom: 8,
+    letterSpacing: -0.5,
   },
   compactTitle: {
-    fontSize: 14,
-    marginBottom: 5,
+    fontSize: 15,
+    marginBottom: 4,
   },
   locationContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 12,
   },
   locationText: {
-    fontSize: 12,
+    fontSize: 13,
     marginLeft: 4,
   },
   connectContainer: {
-    paddingTop: 8,
+    paddingTop: 12,
     borderTopWidth: 1,
   },
   connectText: {
-    fontWeight: '600',
-    fontSize: 13,
+    fontWeight: '700',
+    fontSize: 14,
   },
 });

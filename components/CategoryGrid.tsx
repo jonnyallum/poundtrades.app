@@ -1,6 +1,10 @@
 import React from 'react';
-import { View, Text, StyleSheet, Pressable, Image, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Image, ScrollView, Dimensions } from 'react-native';
 import { Link } from 'expo-router';
+import Animated, { FadeInRight } from 'react-native-reanimated';
+import { useTheme } from '@/hooks/useTheme';
+
+const { width } = Dimensions.get('window');
 
 const categories = [
   {
@@ -36,23 +40,30 @@ const categories = [
 ];
 
 export default function CategoryGrid() {
+  const { theme } = useTheme();
+
   return (
-    <ScrollView 
-      horizontal 
+    <ScrollView
+      horizontal
       showsHorizontalScrollIndicator={false}
       contentContainerStyle={styles.container}
     >
-      {categories.map((category) => (
-        <Pressable 
-          key={category.id} 
-          style={styles.categoryCard}
-          onPress={() => {}}
+      {categories.map((category, index) => (
+        <Animated.View
+          key={category.id}
+          entering={FadeInRight.delay(200 + index * 100).duration(600)}
         >
-          <Image source={{ uri: category.image }} style={styles.categoryImage} />
-          <View style={styles.categoryNameContainer}>
-            <Text style={styles.categoryName}>{category.name}</Text>
-          </View>
-        </Pressable>
+          <Link href={{ pathname: '/(tabs)/listings' as any, params: { category: category.name } }} asChild>
+            <Pressable
+              style={[styles.categoryCard, { backgroundColor: theme.colors.card, shadowColor: '#000' }]}
+            >
+              <Image source={{ uri: category.image }} style={styles.categoryImage} />
+              <View style={styles.categoryNameContainer}>
+                <Text style={[styles.categoryName, { color: theme.colors.text }]}>{category.name}</Text>
+              </View>
+            </Pressable>
+          </Link>
+        </Animated.View>
       ))}
     </ScrollView>
   );
@@ -60,24 +71,24 @@ export default function CategoryGrid() {
 
 const styles = StyleSheet.create({
   container: {
+    paddingLeft: 20,
     paddingRight: 20,
+    paddingVertical: 10,
   },
   categoryCard: {
-    width: 110,
-    height: 130,
-    marginRight: 12,
-    borderRadius: 8,
+    width: 120,
+    height: 140,
+    marginRight: 16,
+    borderRadius: 20,
     overflow: 'hidden',
-    backgroundColor: '#fff',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 4,
   },
   categoryImage: {
     width: '100%',
-    height: 90,
+    height: 95,
   },
   categoryNameContainer: {
     flex: 1,
@@ -86,6 +97,7 @@ const styles = StyleSheet.create({
   },
   categoryName: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '700',
+    letterSpacing: 0.5,
   },
 });

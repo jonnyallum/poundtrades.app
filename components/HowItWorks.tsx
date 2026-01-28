@@ -1,40 +1,43 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { Search, KeyRound as Pound, MessageSquare } from 'lucide-react-native';
+import { Search, Coins, MessageSquare } from 'lucide-react-native';
+import { useTheme } from '@/hooks/useTheme';
 
 export default function HowItWorks() {
+  const { theme } = useTheme();
+
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>How It Works</Text>
-      
+      <Text style={[styles.title, { color: theme.colors.text }]}>How It Works</Text>
+
       <View style={styles.stepsContainer}>
-        <View style={styles.step}>
-          <View style={styles.iconContainer}>
-            <Search size={24} color="#000" />
+        <View style={[styles.step, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
+          <View style={[styles.iconContainer, { backgroundColor: theme.colors.primary }]}>
+            <Search size={22} color="#000" />
           </View>
-          <Text style={styles.stepTitle}>Find Materials</Text>
-          <Text style={styles.stepDescription}>
-            Browse local surplus building materials near you
+          <Text style={[styles.stepTitle, { color: theme.colors.text }]}>Find Materials</Text>
+          <Text style={[styles.stepDescription, { color: theme.colors.textMuted }]}>
+            Browse surplus building materials near you
           </Text>
         </View>
-        
-        <View style={styles.step}>
-          <View style={styles.iconContainer}>
-            <Pound size={24} color="#000" />
+
+        <View style={[styles.step, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
+          <View style={[styles.iconContainer, { backgroundColor: theme.colors.primary }]}>
+            <Coins size={22} color="#000" />
           </View>
-          <Text style={styles.stepTitle}>Pay £1 to Connect</Text>
-          <Text style={styles.stepDescription}>
-            Unlock contact details with a small connection fee
+          <Text style={[styles.stepTitle, { color: theme.colors.text }]}>Pay £1</Text>
+          <Text style={[styles.stepDescription, { color: theme.colors.textMuted }]}>
+            Unlock contact for a tiny connection fee
           </Text>
         </View>
-        
-        <View style={styles.step}>
-          <View style={styles.iconContainer}>
-            <MessageSquare size={24} color="#000" />
+
+        <View style={[styles.step, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
+          <View style={[styles.iconContainer, { backgroundColor: theme.colors.primary }]}>
+            <MessageSquare size={22} color="#000" />
           </View>
-          <Text style={styles.stepTitle}>Connect & Buy</Text>
-          <Text style={styles.stepDescription}>
-            Message the seller and arrange collection or delivery
+          <Text style={[styles.stepTitle, { color: theme.colors.text }]}>Connect</Text>
+          <Text style={[styles.stepDescription, { color: theme.colors.textMuted }]}>
+            Message the seller and arrange collection
           </Text>
         </View>
       </View>
@@ -44,42 +47,50 @@ export default function HowItWorks() {
 
 const styles = StyleSheet.create({
   container: {
-    marginTop: 40,
+    marginTop: 50,
     paddingHorizontal: 20,
   },
   title: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 20,
+    fontSize: 24,
+    fontWeight: '900',
+    marginBottom: 24,
+    letterSpacing: -0.5,
   },
   stepsContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    gap: 12,
   },
   step: {
     flex: 1,
     alignItems: 'center',
-    paddingHorizontal: 5,
+    padding: 16,
+    borderRadius: 24,
+    borderWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 2,
   },
   iconContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#FFD700',
+    width: 48,
+    height: 48,
+    borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 15,
+    marginBottom: 16,
   },
   stepTitle: {
     fontSize: 14,
-    fontWeight: 'bold',
+    fontWeight: '800',
     marginBottom: 8,
     textAlign: 'center',
+    letterSpacing: -0.2,
   },
   stepDescription: {
-    fontSize: 12,
-    color: '#666',
+    fontSize: 11,
     textAlign: 'center',
-    lineHeight: 18,
+    lineHeight: 16,
+    fontWeight: '500',
   },
 });

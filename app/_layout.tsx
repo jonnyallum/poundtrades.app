@@ -31,32 +31,30 @@ export default function RootLayout() {
         const inAuthGroup = segments[0] === 'login';
 
         if (!session && !inAuthGroup) {
-            // Redirect to the login page if the user is not authenticated
             router.replace('/login');
         } else if (session && inAuthGroup) {
-            // Redirect to the home page if the user is authenticated and on the login page
             router.replace('/');
         }
     }, [session, segments, initialized]);
 
     return (
         <ThemeProvider>
-            <View style={{ flex: 1, backgroundColor: '#040404' }}>
+            <View style={{ flex: 1, backgroundColor: '#000' }}>
                 <Stack
                     screenOptions={{
                         headerShown: false,
                         contentStyle: {
-                            backgroundColor: '#040404',
+                            backgroundColor: '#000',
                         },
                         animation: 'fade_from_bottom',
                     }}
                 >
                     <Stack.Screen name="index" />
+                    <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
                     <Stack.Screen name="map" options={{ presentation: 'fullScreenModal' }} />
                     <Stack.Screen name="login" options={{ presentation: 'modal' }} />
                     <Stack.Screen name="create-listing" options={{ presentation: 'modal' }} />
                 </Stack>
-                <StatusBar style="light" translucent backgroundColor="transparent" />
             </View>
         </ThemeProvider>
     );

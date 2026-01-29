@@ -101,17 +101,27 @@ The app now includes a dedicated "Wanted" section where users can:
 
 This feature helps connect buyers with specific needs to sellers who might have matching materials, creating a more complete marketplace experience.
 
+## Project Structure (Modernized)
+
+- **app/**: Expo Router application screens
+- **components/**: Premium UI component library (Themed, Animated)
+- **hooks/**: Custom React hooks (useTheme, useFrameworkReady)
+- **lib/**: Shared libraries (Supabase, Stripe)
+- **scripts/**: Developer utilities and database management scripts
+- **infrastructure/**: Schema dumps, reference assets, and environment backups
+- **assets/**: App icons, fonts, and static media
+
+## Premium UI (2026 Standards)
+
+The app has been elevated to meet trillion-dollar-enterprise quality:
+1. **Themed Design System**: Centralized color tokens in `useTheme`, supporting organic Light/Dark mode transitions.
+2. **Modern Radii & Spacing**: Generous 16-24px border radii for cards and interactive elements for a cohesive, tactile feel.
+3. **Optimized Layouts**: Improved visual hierarchy in the Marketplace and Home screens with better shadows and spacing.
+4. **Workspace Hygiene**: Cleaned up the root directory by moving utilities to their respective managed folders.
+
 ## Getting Started
 
 1. Clone the repository
-2. Install dependencies with `npm install`
-3. Create a `.env` file with your Supabase credentials
-4. Add your Mapbox tokens:
-   - **Recommended for Mapbox-native builds:** `MAPBOX_DOWNLOADS_TOKEN` (secret token with `downloads:read` scope)
-   - **Optional for map rendering:** `EXPO_PUBLIC_MAPBOX_TOKEN` (public token for client-side SDK access)
-   - **Without a downloads token:** the app automatically switches to the MapLibre implementation (no token required), but Mapbox SDK–specific features and styles may be limited.
-5. Start the development server with `npm run dev`
-
-## License
-
-This project is licensed under the MIT License.
+2. Install dependencies with `pnpm install` or `npm install`
+3. Create a `.env` file with your Supabase credentials (see `.env.example`)
+4. Start the development server with `npm run web` or `npx expo start`

@@ -1,8 +1,13 @@
 import { useEffect } from 'react';
 
+declare global {
+  interface Window {
+    frameworkReady?: () => void;
+  }
+}
+
 export function useFrameworkReady() {
-    useEffect(() => {
-        // Logic to handle native module initialization if needed
-        console.log('Poundtrades 2.0 Framework Ready');
-    }, []);
+  useEffect(() => {
+    window.frameworkReady?.();
+  });
 }

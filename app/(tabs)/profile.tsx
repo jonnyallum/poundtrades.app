@@ -1,16 +1,28 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Pressable, Image, ScrollView, Alert } from 'react-native';
-import { Settings, SquarePlus as PlusSquare, Package, Star, Clock, LogOut } from 'lucide-react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, StyleSheet, Pressable, Image, ScrollView, Alert, Platform } from 'react-native';
+import { Settings, PlusSquare, Package, Star, Clock, LogOut, ChevronRight, Award } from 'lucide-react-native';
 import { Link, router } from 'expo-router';
-import { mockUserListings } from '@/data/mockData';
+import { listingsService, isSupabaseConfigured, supabase } from '@/lib/supabase';
 import ListingCard from '@/components/ListingCard';
-import StatusBadge from '@/components/StatusBadge';
 import CreateListingModal from '@/components/CreateListingModal';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuthStore, getCurrentUser } from '@/lib/auth';
+import { Listing } from '@/types/listing';
+import { createWebIcon } from '@/components/Icon';
+import { ListingsGridSkeleton } from '@/components/SkeletonLoader';
 
-// Define user type for TypeScript
+// Premium Web Icons
+const WebSettings = createWebIcon(Settings);
+const WebPlus = createWebIcon(PlusSquare);
+const WebPackage = createWebIcon(Package);
+const WebStar = createWebIcon(Star);
+const WebClock = createWebIcon(Clock);
+const WebLogOut = createWebIcon(LogOut);
+const WebChevron = createWebIcon(ChevronRight);
+const WebAward = createWebIcon(Award);
+
 interface User {
+  id: string;
   email: string;
   name: string;
   userType: string;
@@ -21,346 +33,311 @@ interface User {
 export default function ProfileScreen() {
   const [activeTab, setActiveTab] = useState('listings');
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const { theme } = useTheme();
+  const { colors, typography, spacing, shadows, radius, layout } = useTheme();
   const { logout } = useAuthStore();
   const [user, setUser] = useState<User | null>(null);
+  const [userListings, setUserListings] = useState<Listing[]>([]);
+  const [savedListings, setSavedListings] = useState<Listing[]>([]);
+  const [listingsLoading, setListingsLoading] = useState(true);
+  const [stats, setStats] = useState({ listings: 0, sold: 0, rating: 4.9 });
 
-  // Get user data on component mount
   useEffect(() => {
     const userData = getCurrentUser();
     setUser(userData as User);
   }, []);
 
-  // Handle logout
+  const fetchUserListings = useCallback(async () => {
+    if (!user?.id || !isSupabaseConfigured) {
+      setListingsLoading(false);
+      return;
+    }
+
+    try {
+      setListingsLoading(true);
+      const { data, error } = await supabase
+        .from('listings')
+        .select(`*, categories(name, description)`)
+        .eq('seller_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (!error && data) {
+        const transformed: Listing[] = (data as any[]).map((item) => ({
+          id: item.id,
+          title: item.title,
+          description: item.description || '',
+          price: item.price,
+          location: item.location || 'Location not specified',
+          category: item.categories?.name || 'Uncategorized',
+          images: item.images || [],
+          status: item.status || 'active',
+          userType: item.user_type || 'private',
+          createdAt: item.created_at || new Date().toISOString(),
+          userId: item.seller_id || '',
+        }));
+        setUserListings(transformed);
+        const soldCount = transformed.filter(l => l.status === 'sold').length;
+        setStats(prev => ({ ...prev, listings: transformed.length, sold: soldCount }));
+      }
+
+      const { data: favData } = await supabase
+        .from('favorites')
+        .select(`listing_id, listings(*, categories(name))`)
+        .eq('user_id', user.id);
+
+      if (favData) {
+        const transformedFavorites: Listing[] = (favData as any[])
+          .filter(f => f.listings)
+          .map((fav) => ({
+            id: fav.listings.id,
+            title: fav.listings.title,
+            description: fav.listings.description || '',
+            price: fav.listings.price,
+            location: fav.listings.location || 'Location not specified',
+            category: fav.listings.categories?.name || 'Uncategorized',
+            images: fav.listings.images || [],
+            status: fav.listings.status || 'active',
+            userType: fav.listings.user_type || 'private',
+            createdAt: fav.listings.created_at || new Date().toISOString(),
+            userId: fav.listings.seller_id || '',
+          }));
+        setSavedListings(transformedFavorites);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setTimeout(() => setListingsLoading(false), 500);
+    }
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (user?.id) fetchUserListings();
+  }, [user?.id, fetchUserListings]);
+
   const handleLogout = async () => {
-    Alert.alert(
-      "Sign Out",
-      "Are you sure you want to sign out?",
-      [
+    if (Platform.OS === 'web') {
+      const confirm = window.confirm("Are you sure you want to sign out?");
+      if (confirm) {
+        const result = await logout();
+        if (result.success) router.replace('../login');
+      }
+    } else {
+      Alert.alert("Sign Out", "Are you sure you want to sign out?", [
+        { text: "Cancel", style: "cancel" },
         {
-          text: "Cancel",
-          style: "cancel"
-        },
-        {
-          text: "Sign Out",
-          style: "destructive",
-          onPress: async () => {
+          text: "Sign Out", style: "destructive", onPress: async () => {
             const result = await logout();
-            if (result.success) {
-              router.replace('../login');
-            } else {
-              Alert.alert("Error", result.error || "Failed to sign out");
-            }
+            if (result.success) router.replace('../login');
           }
         }
-      ]
-    );
+      ]);
+    }
   };
 
-  // If user data is not loaded yet
-  if (!user) {
-    return (
-      <View style={[styles.container, { backgroundColor: theme.background, justifyContent: 'center', alignItems: 'center' }]}>
-        <Text style={{ color: theme.text }}>Loading profile...</Text>
-      </View>
-    );
-  }
+  if (!user) return null;
 
-  // Format join date
-  const formattedDate = new Date(user.joinDate).toLocaleDateString('en-GB', { 
-    month: 'long', 
-    year: 'numeric' 
+  const formattedDate = new Date(user.joinDate).toLocaleDateString('en-GB', {
+    month: 'long', year: 'numeric'
   });
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <View style={styles.header}>
-        <Text style={[styles.headerTitle, { color: theme.text }]}>Profile</Text>
-        <Pressable style={[styles.settingsButton, { backgroundColor: theme.card }]}>
-          <Settings size={22} color={theme.text} />
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      {/* Premium Header */}
+      <View style={[styles.header, {
+        paddingTop: Platform.OS === 'ios' ? layout.scale(64) : layout.scale(48),
+        paddingBottom: layout.scale(24),
+        paddingHorizontal: layout.scale(20),
+      }]}>
+        <View>
+          <Text style={[styles.headerSubtitle, { color: colors.primary, fontSize: layout.moderateScale(10) }]}>ELITE MEMBER</Text>
+          <Text style={[styles.headerTitle, { color: colors.text, fontSize: layout.moderateScale(28) }]}>DASHBOARD</Text>
+        </View>
+        <Pressable style={[styles.settingsButton, {
+          backgroundColor: colors.card,
+          borderColor: colors.border,
+          width: layout.touchTarget + 6,
+          height: layout.touchTarget + 6,
+          borderRadius: radius.md,
+        }]}>
+          <WebSettings size={layout.moderateScale(22)} color={colors.primary} strokeWidth={2.5} />
         </Pressable>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false}>
-        <View style={[styles.profileCard, { backgroundColor: theme.card }]}>
-          <Image source={{ uri: user.image }} style={styles.profileImage} />
-          <View style={styles.profileInfo}>
-            <Text style={[styles.profileName, { color: theme.text }]}>{user.name}</Text>
-            <View style={[styles.userTypeContainer, { backgroundColor: theme.tabBar }]}>
-              <Text style={[styles.userTypeText, { color: theme.primary }]}>{user.userType}</Text>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: layout.scale(100) }]}
+      >
+        {/* Profile "Black Card" */}
+        <View style={[styles.profileCard, {
+          backgroundColor: colors.card,
+          borderColor: colors.border,
+          marginHorizontal: layout.scale(20),
+          borderRadius: radius.xl,
+          padding: layout.scale(20),
+          marginBottom: layout.scale(24),
+        }, shadows.lg]}>
+          <View style={styles.profileMain}>
+            <Image source={{ uri: user.image }} style={[styles.profileImage, { width: layout.scale(80), height: layout.scale(80), borderRadius: radius.md }]} />
+            <View style={styles.profileInfo}>
+              <View style={styles.nameRow}>
+                <Text style={[styles.profileName, { color: colors.text, fontSize: layout.moderateScale(20) }]}>{user.name.toUpperCase()}</Text>
+                <WebAward size={layout.moderateScale(18)} color={colors.primary} strokeWidth={2.5} />
+              </View>
+              <View style={[styles.statusBadge, { backgroundColor: `${colors.primary}15`, borderRadius: radius.sm }]}>
+                <Text style={[styles.statusText, { color: colors.primary, fontSize: layout.moderateScale(10) }]}>{user.userType.toUpperCase()}</Text>
+              </View>
+              <Text style={[styles.joinedText, { color: colors.textSecondary, fontSize: layout.moderateScale(10) }]}>ESTABLISHED {formattedDate.toUpperCase()}</Text>
             </View>
-            <Text style={[styles.joinedText, { color: theme.secondaryText }]}>Member since {formattedDate}</Text>
+          </View>
+
+          {/* Stat Ribbon */}
+          <View style={[styles.divider, { backgroundColor: colors.border, marginBottom: layout.scale(20) }]} />
+          <View style={styles.statsRibbon}>
+            <View style={styles.statBox}>
+              <Text style={[styles.statValue, { color: colors.primary, fontSize: layout.moderateScale(22) }]}>{stats.listings}</Text>
+              <Text style={[styles.statLabel, { color: colors.textMuted }]}>PORTFOLIO</Text>
+            </View>
+            <View style={styles.statBox}>
+              <Text style={[styles.statValue, { color: colors.primary, fontSize: layout.moderateScale(22) }]}>{stats.sold}</Text>
+              <Text style={[styles.statLabel, { color: colors.textMuted }]}>TRADES</Text>
+            </View>
+            <View style={styles.statBox}>
+              <Text style={[styles.statValue, { color: colors.primary, fontSize: layout.moderateScale(22) }]}>{stats.rating}</Text>
+              <Text style={[styles.statLabel, { color: colors.textMuted }]}>TRUST</Text>
+            </View>
           </View>
         </View>
 
-        <View style={[styles.statsContainer, { backgroundColor: theme.card }]}>
-          <View style={styles.statItem}>
-            <Text style={[styles.statNumber, { color: theme.text }]}>12</Text>
-            <Text style={[styles.statLabel, { color: theme.secondaryText }]}>Listings</Text>
-          </View>
-          <View style={[styles.statDivider, { backgroundColor: theme.border }]} />
-          <View style={styles.statItem}>
-            <Text style={[styles.statNumber, { color: theme.text }]}>8</Text>
-            <Text style={[styles.statLabel, { color: theme.secondaryText }]}>Sold</Text>
-          </View>
-          <View style={[styles.statDivider, { backgroundColor: theme.border }]} />
-          <View style={styles.statItem}>
-            <Text style={[styles.statNumber, { color: theme.text }]}>4.7</Text>
-            <Text style={[styles.statLabel, { color: theme.secondaryText }]}>Rating</Text>
-          </View>
-        </View>
-
-        <Pressable 
-          style={[styles.createButton, { backgroundColor: theme.primary }]}
+        {/* Global CTA */}
+        <Pressable
+          style={[styles.createButton, {
+            backgroundColor: colors.primary,
+            marginHorizontal: layout.scale(20),
+            height: layout.scale(64),
+            borderRadius: radius.xl,
+            marginBottom: layout.scale(40),
+          }, shadows.glow]}
           onPress={() => setShowCreateModal(true)}
         >
-          <PlusSquare size={20} color="#000" />
-          <Text style={styles.createButtonText}>Create New Listing</Text>
+          <WebPlus size={layout.moderateScale(22)} color="#000" strokeWidth={3} />
+          <Text style={[styles.createButtonText, { fontSize: layout.moderateScale(15) }]}>LIST NEW ASSETS</Text>
         </Pressable>
 
-        <View style={[styles.tabsContainer, { backgroundColor: theme.background }]}>
-          <Pressable 
-            style={[
-              styles.tab, 
-              { backgroundColor: activeTab === 'listings' ? theme.card : 'transparent' }
-            ]} 
+        {/* Tab Controls */}
+        <View style={[styles.tabsWrapper, { paddingHorizontal: layout.scale(20), marginBottom: layout.scale(24) }]}>
+          <Pressable
+            style={[styles.tabItem, activeTab === 'listings' && { borderBottomColor: colors.primary }]}
             onPress={() => setActiveTab('listings')}
           >
-            <Package size={18} color={activeTab === 'listings' ? theme.primary : theme.secondaryText} />
-            <Text 
-              style={[
-                styles.tabText, 
-                { color: activeTab === 'listings' ? theme.text : theme.secondaryText }
-              ]}
-            >
-              My Listings
-            </Text>
+            <Text style={[styles.tabLabel, {
+              color: activeTab === 'listings' ? colors.text : colors.textMuted,
+              fontSize: layout.moderateScale(11),
+            }]}>MY ASSETS</Text>
           </Pressable>
-          <Pressable 
-            style={[
-              styles.tab, 
-              { backgroundColor: activeTab === 'saved' ? theme.card : 'transparent' }
-            ]} 
+          <Pressable
+            style={[styles.tabItem, activeTab === 'saved' && { borderBottomColor: colors.primary }]}
             onPress={() => setActiveTab('saved')}
           >
-            <Star size={18} color={activeTab === 'saved' ? theme.primary : theme.secondaryText} />
-            <Text 
-              style={[
-                styles.tabText, 
-                { color: activeTab === 'saved' ? theme.text : theme.secondaryText }
-              ]}
-            >
-              Saved
-            </Text>
+            <Text style={[styles.tabLabel, {
+              color: activeTab === 'saved' ? colors.text : colors.textMuted,
+              fontSize: layout.moderateScale(11),
+            }]}>WATCHLIST</Text>
           </Pressable>
-          <Pressable 
-            style={[
-              styles.tab, 
-              { backgroundColor: activeTab === 'history' ? theme.card : 'transparent' }
-            ]} 
+          <Pressable
+            style={[styles.tabItem, activeTab === 'history' && { borderBottomColor: colors.primary }]}
             onPress={() => setActiveTab('history')}
           >
-            <Clock size={18} color={activeTab === 'history' ? theme.primary : theme.secondaryText} />
-            <Text 
-              style={[
-                styles.tabText, 
-                { color: activeTab === 'history' ? theme.text : theme.secondaryText }
-              ]}
-            >
-              History
-            </Text>
+            <Text style={[styles.tabLabel, {
+              color: activeTab === 'history' ? colors.text : colors.textMuted,
+              fontSize: layout.moderateScale(11),
+            }]}>LOGS</Text>
           </Pressable>
         </View>
 
-        <View style={styles.listingsContainer}>
-          {activeTab === 'listings' && mockUserListings.map(listing => (
-            <View key={listing.id} style={styles.listingItem}>
-              <ListingCard listing={listing} showStatus />
-            </View>
-          ))}
-          {activeTab === 'saved' && (
-            <Text style={[styles.emptyStateText, { color: theme.secondaryText }]}>No saved listings yet</Text>
-          )}
-          {activeTab === 'history' && (
-            <Text style={[styles.emptyStateText, { color: theme.secondaryText }]}>No transaction history yet</Text>
+        {/* Dynamic Content */}
+        <View style={[styles.contentArea, { paddingHorizontal: layout.scale(20) }]}>
+          {listingsLoading ? (
+            <ListingsGridSkeleton />
+          ) : (
+            <>
+              {activeTab === 'listings' && (
+                userListings.length > 0 ? (
+                  userListings.map((l) => <ListingCard key={l.id} listing={l} showStatus />)
+                ) : (
+                  <View style={[styles.emptyView, { paddingVertical: layout.scale(80) }]}>
+                    <Text style={[styles.emptyText, { color: colors.textSecondary, fontSize: layout.moderateScale(11) }]}>NO ACTIVE ASSETS IN PORTFOLIO</Text>
+                  </View>
+                )
+              )}
+              {activeTab === 'saved' && (
+                savedListings.length > 0 ? (
+                  savedListings.map((l) => <ListingCard key={l.id} listing={l} />)
+                ) : (
+                  <View style={[styles.emptyView, { paddingVertical: layout.scale(80) }]}>
+                    <Text style={[styles.emptyText, { color: colors.textSecondary, fontSize: layout.moderateScale(11) }]}>WATCHLIST IS EMPTY</Text>
+                  </View>
+                )
+              )}
+              {activeTab === 'history' && (
+                <View style={[styles.emptyView, { paddingVertical: layout.scale(80) }]}>
+                  <Text style={[styles.emptyText, { color: colors.textSecondary, fontSize: layout.moderateScale(11) }]}>NO TRANSACTION LOGS RECORDED</Text>
+                </View>
+              )}
+            </>
           )}
         </View>
 
-        <Pressable 
-          style={[styles.logoutButton, { borderColor: '#FF3B30' }]}
-          onPress={handleLogout}
-        >
-          <LogOut size={18} color="#FF3B30" />
-          <Text style={styles.logoutText}>Sign Out</Text>
+        <Pressable style={[styles.logoutBtn, { marginTop: layout.scale(40), height: layout.touchTarget }]} onPress={handleLogout}>
+          <WebLogOut size={layout.moderateScale(18)} color={colors.error} />
+          <Text style={[styles.logoutText, { color: colors.error, fontSize: layout.moderateScale(12) }]}>SECURE SIGN OUT</Text>
         </Pressable>
       </ScrollView>
 
-      {/* Create Listing Modal */}
       <CreateListingModal
         visible={showCreateModal}
         onClose={() => setShowCreateModal(false)}
-        onSuccess={() => {
-          // Optionally refresh listings or navigate to listings tab
-          setActiveTab('listings');
-        }}
+        onSuccess={() => { setActiveTab('listings'); fetchUserListings(); }}
       />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+  container: { flex: 1 },
+  scrollContent: {
+    // paddingBottom dynamic
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 60,
-    paddingBottom: 15,
   },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
+  headerSubtitle: { fontWeight: '900', letterSpacing: 2, marginBottom: 4 },
+  headerTitle: { fontWeight: '900', letterSpacing: -0.5 },
+  settingsButton: { alignItems: 'center', justifyContent: 'center', borderWidth: 1.5 },
+  profileCard: { borderWidth: 1.5 },
+  profileMain: { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
+  profileImage: { backgroundColor: '#111' },
+  profileInfo: { marginLeft: 20, flex: 1 },
+  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
+  profileName: { fontWeight: '900', letterSpacing: -0.5 },
+  statusBadge: { alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 4, marginBottom: 8 },
+  statusText: { fontWeight: '900', letterSpacing: 1 },
+  joinedText: { fontWeight: '700', letterSpacing: 0.5, opacity: 0.6 },
+  divider: { height: 1, width: '100%' },
+  statsRibbon: { flexDirection: 'row', justifyContent: 'space-between' },
+  statBox: { alignItems: 'center', flex: 1 },
+  statValue: { fontWeight: '900', marginBottom: 4 },
+  statLabel: { fontSize: 9, fontWeight: '900', letterSpacing: 1 },
+  createButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12 },
+  createButtonText: { fontWeight: '900', letterSpacing: 1.5, color: '#000' },
+  tabsWrapper: { flexDirection: 'row' },
+  tabItem: { flex: 1, alignItems: 'center', paddingVertical: 12, borderBottomWidth: 3, borderBottomColor: 'transparent' },
+  tabLabel: { fontWeight: '900', letterSpacing: 1 },
+  contentArea: {
+    // paddingHorizontal dynamic
   },
-  settingsButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  profileCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 12,
-    marginHorizontal: 20,
-    marginTop: 10,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  profileImage: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    backgroundColor: '#f0f0f0',
-  },
-  profileInfo: {
-    marginLeft: 15,
-    flex: 1,
-  },
-  profileName: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 5,
-  },
-  userTypeContainer: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 4,
-    marginBottom: 5,
-  },
-  userTypeText: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  joinedText: {
-    fontSize: 12,
-  },
-  statsContainer: {
-    flexDirection: 'row',
-    borderRadius: 12,
-    marginHorizontal: 20,
-    marginTop: 15,
-    padding: 15,
-    justifyContent: 'space-around',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  statItem: {
-    alignItems: 'center',
-  },
-  statNumber: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 4,
-  },
-  statLabel: {
-    fontSize: 12,
-  },
-  statDivider: {
-    width: 1,
-  },
-  createButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginHorizontal: 20,
-    marginTop: 20,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  createButtonText: {
-    marginLeft: 8,
-    fontWeight: 'bold',
-    color: '#000',
-  },
-  tabsContainer: {
-    flexDirection: 'row',
-    marginHorizontal: 20,
-    marginTop: 25,
-    marginBottom: 15,
-    borderRadius: 8,
-    padding: 5,
-  },
-  tab: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 10,
-    borderRadius: 6,
-  },
-  tabText: {
-    marginLeft: 5,
-    fontWeight: '500',
-    fontSize: 13,
-  },
-  listingsContainer: {
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-  },
-  listingItem: {
-    marginBottom: 15,
-  },
-  emptyStateText: {
-    textAlign: 'center',
-    marginTop: 40,
-    marginBottom: 40,
-  },
-  logoutButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginHorizontal: 20,
-    marginTop: 10,
-    marginBottom: 30,
-    paddingVertical: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-  },
-  logoutText: {
-    marginLeft: 8,
-    color: '#FF3B30',
-    fontWeight: '600',
-  },
+  emptyView: { alignItems: 'center' },
+  emptyText: { fontWeight: '900', letterSpacing: 1.5, opacity: 0.5 },
+  logoutBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
+  logoutText: { fontWeight: '900', letterSpacing: 1.5 },
 });

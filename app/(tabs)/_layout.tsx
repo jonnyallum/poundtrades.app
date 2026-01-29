@@ -6,83 +6,88 @@ import { useAuthStore } from '@/lib/auth';
 import { router } from 'expo-router';
 
 export default function TabLayout() {
-  const { theme } = useTheme();
+  const { colors, typography, shadows } = useTheme();
   const { isAuthenticated, isLoading } = useAuthStore();
 
   // Check authentication status for protected routes
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      // Redirect to login if not authenticated
       router.replace('../login');
     }
   }, [isAuthenticated, isLoading]);
 
-  // Don't render tabs until authentication check is complete
-  if (isLoading) {
-    return null;
-  }
+  if (isLoading) return null;
 
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: theme.primary,
-        tabBarInactiveTintColor: theme.secondaryText,
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.textMuted,
         tabBarStyle: {
-          backgroundColor: theme.tabBar,
-          borderTopColor: theme.border,
-          height: 60,
-          paddingBottom: 10,
-          paddingTop: 5,
+          backgroundColor: colors.black,
+          borderTopColor: 'rgba(255, 215, 0, 0.1)',
+          height: 65,
+          paddingBottom: 12,
+          paddingTop: 8,
+          borderTopWidth: 1,
+          ...shadows.lg,
         },
         tabBarLabelStyle: {
-          fontSize: 12,
+          fontSize: 11,
+          fontWeight: '700',
+          letterSpacing: 0.5,
+          marginTop: -4,
         },
         headerStyle: {
-          backgroundColor: theme.background,
+          backgroundColor: colors.black,
+          borderBottomColor: 'rgba(255, 215, 0, 0.1)',
+          borderBottomWidth: 1,
         },
-        headerTintColor: theme.text,
+        headerTintColor: colors.text,
         headerTitleStyle: {
-          fontWeight: 'bold',
+          fontWeight: '900',
+          fontSize: 18,
+          letterSpacing: 1,
         },
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => <Home size={22} color={color} />,
+          title: 'HOME',
+          tabBarIcon: ({ color }) => <Home size={24} color={color} strokeWidth={2.5} />,
           headerShown: false,
         }}
       />
       <Tabs.Screen
         name="listings"
         options={{
-          title: 'Listings',
-          tabBarIcon: ({ color }) => <Package size={22} color={color} />,
+          title: 'MARKET',
+          tabBarIcon: ({ color }) => <Package size={24} color={color} strokeWidth={2.5} />,
           headerShown: false,
         }}
       />
       <Tabs.Screen
         name="wanted"
         options={{
-          title: 'Wanted',
-          tabBarIcon: ({ color }) => <PlusSquare size={22} color={color} />,
+          title: 'WANTED',
+          tabBarIcon: ({ color }) => <PlusSquare size={24} color={color} strokeWidth={2.5} />,
           headerShown: false,
         }}
       />
       <Tabs.Screen
         name="map"
         options={{
-          title: 'Map',
-          tabBarIcon: ({ color }) => <MapPin size={22} color={color} />,
+          title: 'NEARBY',
+          tabBarIcon: ({ color }) => <MapPin size={24} color={color} strokeWidth={2.5} />,
           headerShown: false,
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'Profile',
-          tabBarIcon: ({ color }) => <User size={22} color={color} />,
+          title: 'PROFILE',
+          tabBarIcon: ({ color }) => <User size={24} color={color} strokeWidth={2.5} />,
           headerShown: false,
         }}
       />

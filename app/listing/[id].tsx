@@ -4,11 +4,11 @@ import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { Heart, Share2, ChevronLeft, MapPin, Phone, MessageSquare } from 'lucide-react-native';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuthStore } from '@/lib/auth';
-import { supabase } from '@/lib/supabase';
-import { mockListings } from '@/data/mockData';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import MapView from '@/components/MapView';
 import { useStripeSafe } from '@/lib/stripe';
 import { env } from '@/lib/env';
+import { Listing } from '@/types/listing';
 
 export default function ListingDetailsScreen() {
   const { id } = useLocalSearchParams();
@@ -16,8 +16,8 @@ export default function ListingDetailsScreen() {
   const { theme } = useTheme();
   const { user, isAuthenticated } = useAuthStore();
   const { initPaymentSheet, presentPaymentSheet, isPlatformSupported } = useStripeSafe();
-  
-  const [listing, setListing] = useState<any>(null);
+
+  const [listing, setListing] = useState<Listing | null>(null);
   const [loading, setLoading] = useState(true);
   const [unlocked, setUnlocked] = useState(false);
   const [favorited, setFavorited] = useState(false);
@@ -34,46 +34,78 @@ export default function ListingDetailsScreen() {
     return fallback;
   };
 
-  // Fetch listing data
+  // Fetch listing data from Supabase
   const fetchListing = useCallback(async () => {
     try {
       setLoading(true);
-      
-      // For now, we'll use mock data
-      // In a real app, you'd fetch from Supabase
-      const foundListing = mockListings.find(item => item.id.toString() === id);
-      
-      if (foundListing) {
-        setListing(foundListing);
-        
-        // Check if this listing is already unlocked by this user
-        if (user && env.isSupabaseConfigured) {
-          try {
-            const { data: unlockData } = await supabase
-              .from('unlocks')
-              .select('*')
-              .eq('user_id', user.id)
-              .eq('listing_id', id)
-              .single();
-              
-            setUnlocked(!!unlockData);
-            
-            // Check if listing is favorited
-            const { data: favData } = await supabase
-              .from('favorites')
-              .select('*')
-              .eq('user_id', user.id)
-              .eq('listing_id', id)
-              .single();
-              
-            setFavorited(!!favData);
-          } catch (error) {
-            // If no data is found, these queries will throw errors
-            // which is expected behavior for new users
-            console.log('User data check error:', error);
-          }
-        } else if (!env.isSupabaseConfigured) {
-          console.warn('Supabase is not configured. Unlock and favourite status checks are disabled.');
+
+      if (!isSupabaseConfigured) {
+        Alert.alert('Error', 'Database connection not configured.');
+        setLoading(false);
+        return;
+      }
+
+      // Fetch listing from Supabase
+      const { data: listingData, error: listingError } = await supabase
+        .from('listings')
+        .select(`
+          *,
+          categories(name, description)
+        `)
+        .eq('id', id)
+        .single();
+
+      if (listingError || !listingData) {
+        console.error('Error fetching listing:', listingError);
+        setListing(null);
+        setLoading(false);
+        return;
+      }
+
+      // Transform to Listing type
+      const transformedListing: Listing = {
+        id: listingData.id,
+        title: listingData.title,
+        description: listingData.description || '',
+        price: listingData.price,
+        location: listingData.location || 'Location not specified',
+        category: listingData.categories?.name || 'Uncategorized',
+        images: listingData.images || [],
+        status: listingData.status || 'active',
+        userType: listingData.user_type || 'private',
+        createdAt: listingData.created_at || new Date().toISOString(),
+        userId: listingData.seller_id || listingData.user_id || '',
+        latitude: listingData.latitude,
+        longitude: listingData.longitude,
+      };
+
+      setListing(transformedListing);
+
+      // Check if this listing is already unlocked by this user
+      if (user) {
+        try {
+          const { data: unlockData } = await supabase
+            .from('unlocks')
+            .select('*')
+            .eq('user_id', user.id)
+            .eq('listing_id', id)
+            .single();
+
+          setUnlocked(!!unlockData);
+
+          // Check if listing is favorited
+          const { data: favData } = await supabase
+            .from('favorites')
+            .select('*')
+            .eq('user_id', user.id)
+            .eq('listing_id', id)
+            .single();
+
+          setFavorited(!!favData);
+        } catch (error) {
+          // If no data is found, these queries will throw errors
+          // which is expected behavior for new users
+          console.log('User data check completed');
         }
       }
     } catch (error) {
@@ -176,7 +208,7 @@ export default function ListingDetailsScreen() {
         }
         throw new Error(resolveStripeErrorMessage(sheetError, 'Payment confirmation failed'));
       }
-      
+
       // Payment successful, record the unlock in Supabase
       if (env.isSupabaseConfigured) {
         try {
@@ -198,10 +230,10 @@ export default function ListingDetailsScreen() {
           // Continue anyway since payment was successful
         }
       }
-      
+
       setUnlocked(true);
       setPaymentLoading(false);
-      
+
       Alert.alert('Success', 'Seller contact information unlocked!');
     } catch (error) {
       setPaymentLoading(false);
@@ -291,10 +323,10 @@ export default function ListingDetailsScreen() {
 
   return (
     <>
-      <Stack.Screen 
-        options={{ 
+      <Stack.Screen
+        options={{
           headerShown: false,
-        }} 
+        }}
       />
       <ScrollView style={[styles.container, { backgroundColor: theme.background }]}>
         {/* Header with back button and actions */}
@@ -302,16 +334,16 @@ export default function ListingDetailsScreen() {
           <Pressable onPress={() => router.back()} style={styles.backButton}>
             <ChevronLeft size={24} color={theme.primary} />
           </Pressable>
-          
+
           <View style={styles.headerActions}>
             <Pressable onPress={toggleFavorite} style={styles.actionButton}>
-              <Heart 
-                size={24} 
+              <Heart
+                size={24}
                 color={favorited ? '#f43f5e' : theme.primary}
                 fill={favorited ? '#f43f5e' : 'transparent'}
               />
             </Pressable>
-            
+
             <Pressable onPress={handleShare} style={styles.actionButton}>
               <Share2 size={24} color={theme.primary} />
             </Pressable>
@@ -321,7 +353,7 @@ export default function ListingDetailsScreen() {
         {/* Main content */}
         <View style={styles.content}>
           <Image
-            source={{ uri: listing.image }}
+            source={{ uri: listing.images[0] || 'https://via.placeholder.com/300' }}
             style={[styles.image, styles.imageShadow]}
             resizeMode="cover"
           />
@@ -330,7 +362,7 @@ export default function ListingDetailsScreen() {
             <Text style={[styles.title, { color: theme.text }]}>{listing.title}</Text>
             <Text style={[styles.price, { color: theme.primary }]}>£{listing.price}</Text>
 
-            <View style={[styles.sellerType, { backgroundColor: listing.userType === 'Business' ? '#10b981' : '#3b82f6' }]}>
+            <View style={[styles.sellerType, { backgroundColor: listing.userType === 'business' ? '#10b981' : '#3b82f6' }]}>
               <Text style={styles.sellerTypeText}>{listing.userType}</Text>
             </View>
 
@@ -382,8 +414,8 @@ export default function ListingDetailsScreen() {
             ) : (
               <View style={[styles.contactContainer, { backgroundColor: '#10b981' }]}>
                 <Text style={styles.contactTitle}>Seller Contact Info:</Text>
-                <Text style={styles.contactInfo}>{listing.contactInfo || '07123 456789'}</Text>
-                
+                <Text style={styles.contactInfo}>Contact details will appear here</Text>
+
                 {/* Call/message buttons */}
                 <View style={styles.contactActions}>
                   <Pressable style={[styles.contactButton, { backgroundColor: '#3b82f6' }]}>
@@ -397,14 +429,14 @@ export default function ListingDetailsScreen() {
                 </View>
               </View>
             )}
-            
+
             {/* Posted date */}
             <Text style={[styles.postedDate, { color: theme.secondaryText }]}>
-              Posted {new Date(listing.date || Date.now()).toLocaleDateString()}
+              Posted {new Date(listing.createdAt || Date.now()).toLocaleDateString()}
             </Text>
           </View>
         </View>
-        
+
         {/* Bottom padding */}
         <View style={{ height: 100 }} />
       </ScrollView>

@@ -5,8 +5,17 @@ module.exports = {
     theme: {
         extend: {
             colors: {
-                primary: "#FFD700",
-                background: "#000000",
+                primary: "#FFD700", // Gold
+                secondary: "#B8860B", // Dark Gold
+                accent: "#FFFFFF", // White Accents
+                background: "#050505", // Deep Black
+                surface: "#121212", // Premium Surface
+                muted: "#8B92A0",
+                border: "#1E1E2E",
+            },
+            fontFamily: {
+                sans: ["Outfit", "sans-serif"],
+                mono: ["JetBrainsMono", "monospace"],
             },
         },
     },
